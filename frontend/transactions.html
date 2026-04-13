@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Transactions - Flux</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #08080f; --bg2: #0e0e1a; --card: #12121e; --card2: #181828;
+      --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+      --white: #ffffff; --gray: #8888aa;
+      --orange: #e8491d; --purple: #7c5cbf; --blue: #2563eb; --green2: #34d399;
+      --red: #ef4444;
+    }
+    body { background:var(--bg); color:var(--white); font-family:'Inter', sans-serif; overflow-x:hidden; min-height:100vh; }
+    
+    .navbar {
+      position:fixed; top:18px; left:50%; transform:translateX(-50%); width:calc(100% - 40px); max-width:1280px;
+      background:rgba(12,12,22,0.82); backdrop-filter:blur(20px); border:1px solid var(--border2); border-radius:28px;
+      padding:0 26px; height:68px; display:flex; align-items:center; justify-content:space-between; z-index:1000;
+    }
+    .nav-brand { display:flex; align-items:center; gap:12px; text-decoration:none; color: white; }
+    .nav-logo { width:38px; height:38px; border-radius:14px; background:linear-gradient(135deg,var(--orange),#ff8c42); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:20px; }
+    .nav-center { display:flex; gap:6px; }
+    .nav-link { color:var(--gray); font-size:14px; font-weight:500; text-decoration:none; padding:8px 16px; border-radius:40px; transition:all 0.2s; }
+    .nav-link:hover, .nav-link.active { color:var(--white); background:rgba(255,255,255,0.07); }
+    .nav-right { display:flex; align-items:center; gap:12px; }
+    .btn-logout { border:1px solid var(--border2); color:var(--gray); padding:7px 18px; border-radius:40px; font-size:13px; text-decoration:none; }
+
+    .main { max-width:900px; margin:0 auto; padding:110px 24px 60px; }
+
+    .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+    .header-row h1 { font-size: 36px; font-weight: 800; letter-spacing: -1px; }
+
+    .action-btns { display: flex; gap: 10px; }
+    .action-btns a { padding: 10px 20px; border-radius: 40px; font-size: 13px; font-weight: 600; text-decoration: none; transition: 0.2s; }
+    .btn-income { background: var(--green2); color: #000; }
+    .btn-income:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(52,211,153,0.3); }
+    .btn-expense { background: var(--red); color: #fff; }
+    .btn-expense:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(239,68,68,0.3); }
+
+    .tx-list { display: flex; flex-direction: column; gap: 12px; }
+
+    .tx-item {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--card); border: 1px solid var(--border); border-radius: 20px;
+      padding: 18px 24px; transition: 0.2s;
+    }
+    .tx-item:hover { border-color: rgba(255,255,255,0.15); transform: translateX(4px); }
+
+    .tx-left { display: flex; align-items: center; gap: 16px; }
+    .tx-icon {
+      width: 44px; height: 44px; border-radius: 14px; display: flex;
+      align-items: center; justify-content: center; font-size: 20px; font-weight: 700;
+    }
+    .tx-icon.income { background: rgba(52,211,153,0.15); color: var(--green2); }
+    .tx-icon.expense { background: rgba(239,68,68,0.15); color: var(--red); }
+
+    .tx-info .tx-cat { font-weight: 600; font-size: 15px; }
+    .tx-info .tx-date { color: var(--gray); font-size: 12px; margin-top: 3px; }
+
+    .tx-amount { font-weight: 700; font-size: 16px; }
+    .tx-amount.income { color: var(--green2); }
+    .tx-amount.expense { color: var(--red); }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--gray); }
+    .empty-state h3 { font-size: 20px; margin-bottom: 8px; color: var(--white); }
+
+    @media(max-width:600px) {
+      .header-row { flex-direction: column; align-items: flex-start; gap: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="nav-brand">
+    <div class="nav-logo">⚡</div>
+    <div style="font-weight:700; font-size:20px;">Flux</div>
+  </a>
+  <div class="nav-center">
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+    <a href="analytics.html" class="nav-link">Analytics</a>
+    <a href="goals.html" class="nav-link">Goals</a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-user"></div>
+    <a href="logout.html" class="btn-logout">Log out</a>
+  </div>
+</nav>
+
+<div class="main">
+  <div class="header-row">
+    <h1>Transaction History</h1>
+    <div class="action-btns">
+      <a href="add-income.html" class="btn-income">+ Income</a>
+      <a href="add-expense.html" class="btn-expense">+ Expense</a>
+    </div>
+  </div>
+
+  <div class="tx-list" id="tx-list">
+    <div class="empty-state">
+      <h3>Loading...</h3>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  await initAppPromise;
+  const transactions = await getTransactions();
+  const container = document.getElementById('tx-list');
+
+  if (!transactions || transactions.length === 0) {
+    container.innerHTML = `<div class="empty-state">
+      <h3>No transactions yet</h3>
+      <p>Start by adding your income or recording an expense.</p>
+    </div>`;
+    return;
+  }
+
+  let html = '';
+  transactions.forEach(tx => {
+    const isIncome = tx.type === 'income';
+    const icon = isIncome ? '↑' : '↓';
+    const sign = isIncome ? '+' : '-';
+    
+    html += `<div class="tx-item">
+      <div class="tx-left">
+        <div class="tx-icon ${tx.type}">${icon}</div>
+        <div class="tx-info">
+          <div class="tx-cat">${tx.category || tx.type}</div>
+          <div class="tx-date">${formatDate(tx.date)}</div>
+        </div>
+      </div>
+      <div class="tx-amount ${tx.type}">${sign}${formatCur(tx.amount)}</div>
+    </div>`;
+  });
+  container.innerHTML = html;
+});
+</script>
+</body>
+</html>

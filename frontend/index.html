@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Flux — Gamified Wealth Engine | Save, Grow, Conquer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #08080f; --bg2: #0e0e1a; --bg3: #13131f; --bg4: #1a1a2e;
+      --card: #12121e; --card2: #181828;
+      --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+      --white: #ffffff; --gray: #8888aa; --gray2: #5a5a78;
+      --orange: #e8491d; --orange2: #ff5722;
+      --purple: #7c5cbf; --purple2: #9b79e0;
+      --blue: #2563eb; --blue2: #3b82f6;
+      --green: #10b981; --green2: #34d399;
+      --red: #ef4444; --red2: #f87171;
+      --yellow: #f59e0b; --teal: #06b6d4;
+      --glow-orange: rgba(232,73,29,0.18);
+      --glow-purple: rgba(124,92,191,0.18);
+      --glow-blue: rgba(37,99,235,0.14);
+      --glow-green: rgba(16,185,129,0.14);
+    }
+    body { background:var(--bg); color:var(--white); font-family:'Inter',system-ui,-apple-system,sans-serif; min-height:100vh; overflow-x:hidden; line-height:1.5; }
+    ::-webkit-scrollbar { width:5px; }
+    ::-webkit-scrollbar-track { background:var(--bg2); }
+    ::-webkit-scrollbar-thumb { background:var(--bg4); border-radius:10px; }
+
+    .navbar {
+      position:fixed; top:18px; left:50%; transform:translateX(-50%);
+      width:calc(100% - 40px); max-width:1280px;
+      background:rgba(12,12,22,0.82); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+      border:1px solid var(--border2); border-radius:28px;
+      padding:0 26px; height:68px;
+      display:flex; align-items:center; justify-content:space-between;
+      z-index:1000; transition:all 0.2s ease;
+    }
+    .nav-brand { display:flex; align-items:center; gap:12px; text-decoration:none; }
+    .nav-logo {
+      width:38px; height:38px; border-radius:14px;
+      background:linear-gradient(135deg,var(--orange),#ff8c42);
+      display:flex; align-items:center; justify-content:center;
+      font-weight:800; font-size:20px; color:white;
+      box-shadow:0 0 18px var(--glow-orange);
+    }
+    .nav-name { font-size:20px; font-weight:700; letter-spacing:-0.4px; }
+    .nav-tagline { font-size:11px; color:var(--gray); letter-spacing:0.2px; margin-top:2px; }
+    .nav-center { display:flex; gap:6px; }
+    .nav-link { color:var(--gray); font-size:14px; font-weight:500; text-decoration:none; padding:8px 16px; border-radius:40px; transition:all 0.2s; }
+    .nav-link:hover { color:var(--white); background:rgba(255,255,255,0.07); }
+    .nav-right { display:flex; align-items:center; gap:12px; }
+    .nav-user { display:flex; align-items:center; gap:10px; padding:6px 14px 6px 12px; background:var(--card2); border-radius:40px; border:1px solid var(--border); font-size:13px; }
+    .avatar { width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,var(--purple),var(--blue)); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; }
+    .btn-logout { background:transparent; border:1px solid var(--border2); color:var(--gray); padding:7px 18px; border-radius:40px; font-size:13px; transition:0.2s; cursor:pointer; text-decoration:none; }
+    .btn-logout:hover { color:var(--red); border-color:var(--red); background:rgba(239,68,68,0.08); }
+
+    .main { max-width:1280px; margin:0 auto; padding:110px 24px 60px; }
+
+    .hero-section {
+      position:relative; min-height:88vh;
+      display:flex; flex-direction:column; justify-content:center;
+      margin-bottom:30px;
+    }
+    canvas#heroCanvas {
+      position:absolute; right:-5%; top:-5%; width:60%; height:110%;
+      transform: scale(1.05);
+      pointer-events:none; z-index:0;
+    }
+    .hero-content { position:relative; z-index:2; max-width:580px; }
+    .hero-badge {
+      display:inline-flex; align-items:center; gap:8px;
+      background:rgba(232,73,29,0.12); border:1px solid rgba(232,73,29,0.3);
+      border-radius:100px; padding:6px 16px; font-size:13px; font-weight:500;
+      color:var(--orange2); margin-bottom:28px; backdrop-filter:blur(4px);
+    }
+    .badge-dot { width:8px; height:8px; background:var(--orange2); border-radius:50%; animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.5;transform:scale(1.3);} }
+    .hero-title { font-size:clamp(44px,6vw,78px); font-weight:800; line-height:1.05; letter-spacing:-2px; margin-bottom:24px; }
+    .hero-title span { background:linear-gradient(135deg,var(--orange),#ff9a5e,var(--yellow)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .hero-sub { font-size:18px; color:var(--gray); line-height:1.6; margin-bottom:42px; max-width:460px; }
+    .hero-btns { display:flex; gap:14px; flex-wrap:wrap; }
+    .btn-primary {
+      background:var(--orange); border:none; padding:14px 32px; border-radius:60px;
+      font-weight:600; font-size:15px; color:white;
+      display:inline-flex; align-items:center; gap:8px;
+      transition:0.2s; box-shadow:0 6px 20px var(--glow-orange); cursor:pointer; text-decoration:none;
+    }
+    .btn-primary:hover { background:var(--orange2); transform:translateY(-3px); box-shadow:0 14px 28px var(--glow-orange); }
+    .btn-secondary {
+      background:var(--card2); border:1px solid var(--border2); padding:14px 30px;
+      border-radius:60px; font-weight:500; color:var(--white); transition:0.2s;
+      text-decoration:none; display:inline-flex; align-items:center; gap:8px;
+    }
+    .btn-secondary:hover { background:var(--bg4); transform:translateY(-2px); border-color:rgba(255,255,255,0.25); }
+    .hero-stats { display:flex; gap:40px; margin-top:60px; }
+    .hero-stat .val { font-size:28px; font-weight:700; letter-spacing:-0.5px; }
+    .hero-stat .lbl { font-size:13px; color:var(--gray); }
+    .hero-stat-div { width:1px; background:var(--border); }
+
+    /* Gamification Row */
+    .gamification-row {
+      display: flex; flex-wrap: wrap; gap: 16px; margin: 24px 0 28px 0;
+      background: rgba(24,24,40,0.7); backdrop-filter: blur(8px);
+      border: 1px solid var(--border2); border-radius: 48px;
+      padding: 12px 24px; align-items: center; justify-content: space-between;
+    }
+    .gamification-badge {
+      display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+    }
+    .level-badge {
+      background: linear-gradient(135deg, #e8491d20, #7c5cbf30);
+      padding: 6px 18px; border-radius: 60px; font-weight: 700;
+      border-left: 2px solid var(--orange2); font-size: 14px;
+    }
+    .streak-badge {
+      background: rgba(255,87,34,0.12); padding: 6px 18px; border-radius: 60px;
+      font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px;
+    }
+    .badge-icon { font-size: 18px; }
+
+    .section-header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:20px; }
+    .section-title { font-size:20px; font-weight:700; letter-spacing:-0.3px; }
+    .section-sub { font-size:13px; color:var(--gray); margin-top:4px; }
+
+    .cards-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-bottom:32px; }
+    .card {
+      background:var(--card); border:1px solid var(--border); border-radius:28px; padding:24px;
+      transition:all 0.25s cubic-bezier(0.2,0,0,1); position:relative; overflow:hidden;
+    }
+    .card:hover { transform:translateY(-5px); }
+    .card.orange:hover { border-color:rgba(232,73,29,0.4); box-shadow:0 20px 35px var(--glow-orange); }
+    .card.purple:hover { border-color:rgba(124,92,191,0.4); box-shadow:0 20px 35px var(--glow-purple); }
+    .card.blue:hover { border-color:rgba(59,130,246,0.3); box-shadow:0 20px 35px var(--glow-blue); }
+    .card.green:hover { border-color:rgba(16,185,129,0.3); box-shadow:0 20px 35px var(--glow-green); }
+    .card-icon { width:48px; height:48px; border-radius:18px; display:flex; align-items:center; justify-content:center; font-size:22px; }
+    .card-val { font-size:32px; font-weight:800; letter-spacing:-1px; margin-top:12px; }
+
+    .actions-row { display:flex; gap:14px; margin-bottom:32px; flex-wrap:wrap; }
+    .action-btn {
+      flex:1; background:var(--card); border:1px solid var(--border); border-radius:24px;
+      padding:16px 18px; display:flex; align-items:center; gap:14px; text-decoration:none; transition:0.2s;
+    }
+    .action-btn:hover { transform:translateY(-4px); background:var(--card2); border-color:var(--border2); }
+
+    .panel { background:var(--card); border:1px solid var(--border); border-radius:28px; padding:26px; transition:0.2s; }
+    .two-col { display:grid; grid-template-columns:1.6fr 1fr; gap:24px; margin-bottom:32px; }
+
+    /* Cashback Reimagined Card */
+    .cashback-card {
+      background: linear-gradient(135deg, #181828, #10101a);
+      border: 1px solid rgba(155,121,224,0.3);
+      border-radius: 28px; padding: 24px; margin-bottom: 32px;
+      display: flex; flex-wrap: wrap; justify-content: space-between;
+      align-items: center; gap: 20px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    }
+    .cb-left h3 { font-size: 20px; font-weight: 700; display: flex; gap: 8px; align-items: center; }
+    .comparison { display: flex; gap: 28px; margin-top: 12px; flex-wrap: wrap; }
+    .comparison-item { background: rgba(0,0,0,0.4); border-radius: 24px; padding: 12px 18px; min-width: 160px; }
+    .comp-label { font-size: 12px; color: var(--gray); letter-spacing: 0.5px; }
+    .comp-value { font-size: 26px; font-weight: 800; margin-top: 6px; }
+    .cb-right .micro-save { background: rgba(16,185,129,0.12); border-radius: 20px; padding: 14px 18px; border-left: 3px solid var(--green2); }
+
+    .tx-table { width:100%; border-collapse:collapse; }
+    .tx-table th { font-size:11px; font-weight:600; color:var(--gray2); text-transform:uppercase; padding:12px 8px; border-bottom:1px solid var(--border); }
+    .tx-table td { padding:14px 8px; border-bottom:1px solid rgba(255,255,255,0.04); font-size:13px; }
+    .tx-type { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:50px; font-size:12px; font-weight:500; }
+    .tx-income { background:rgba(16,185,129,0.12); color:var(--green2); }
+    .tx-expense { background:rgba(239,68,68,0.12); color:var(--red2); }
+    .tx-save { background:rgba(124,92,191,0.12); color:var(--purple2); }
+    .tx-amount.pos { color:var(--green2); }
+    .tx-amount.neg { color:var(--red2); }
+
+    .insights-list { display:flex; flex-direction:column; gap:12px; }
+    .insight { background:var(--bg3); border-radius:20px; padding:16px; display:flex; gap:14px; transition:0.2s; border:1px solid var(--border); }
+    .insight:hover { border-color:var(--border2); }
+
+    .goals-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .goal-card { background:var(--card2); border-radius:20px; padding:18px; border:1px solid var(--border); }
+    .chart-area { height:180px; margin-top:12px; }
+
+    footer { text-align:center; padding:32px; border-top:1px solid var(--border); margin-top:24px; color:var(--gray2); font-size:13px; }
+
+    @media(max-width:1000px) {
+      .cards-grid { grid-template-columns:repeat(2,1fr); }
+      .two-col { grid-template-columns:1fr; }
+      .goals-grid { grid-template-columns:1fr; }
+      canvas#heroCanvas { opacity:0.2; }
+      .hero-stats { flex-wrap:wrap; gap:20px; }
+      .nav-center { display:none; }
+    }
+    @media(max-width:640px) {
+      .main { padding:100px 16px 40px; }
+      .cards-grid { grid-template-columns:1fr; }
+      .actions-row { flex-direction:column; }
+      .gamification-row { flex-direction: column; align-items: stretch; text-align: center; }
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="nav-brand">
+    <div class="nav-logo">⚡</div>
+    <div>
+      <div class="nav-name">Flux</div>
+      <div class="nav-tagline">wealth flow engine</div>
+    </div>
+  </a>
+  <div class="nav-center">
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+    <a href="flux-card.html" class="nav-link">Flux Card</a>
+    <a href="analytics.html" class="nav-link">Analytics</a>
+    <a href="goals.html" class="nav-link">Goals</a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-user">
+      <div class="avatar">JD</div>
+      <span>John</span>
+    </div>
+    <a href="logout.html" class="btn-logout">Log out</a>
+  </div>
+</nav>
+
+<div class="main">
+  <section class="hero-section">
+    <canvas id="heroCanvas"></canvas>
+    <div class="hero-content">
+      <div class="hero-badge"><span class="badge-dot"></span> Live · AI wealth engine active</div>
+      <h1 class="hero-title">Turn your<br><span>cashflow</span><br>into wealth.</h1>
+      <p class="hero-sub">FLUX transforms everyday spending into automated investing, helping users build wealth without changing their lifestyle.</p>
+      <div class="hero-btns">
+        <a href="add-income.html" onclick="return requireAuth(event, 'add-income.html')" class="btn-primary">➕ Add Income</a>
+        <a href="create-goal.html" onclick="return requireAuth(event, 'create-goal.html')" class="btn-secondary">🎯 Create Goal</a>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="val" id="h-saved">₹0</div><div class="lbl">Total Saved</div></div>
+        <div class="hero-stat-div"></div>
+        <div class="hero-stat"><div class="val" id="h-vel">0%</div><div class="lbl">Wealth Velocity</div></div>
+        <div class="hero-stat-div"></div>
+        <div class="hero-stat"><div class="val" id="h-goals">0</div><div class="lbl">Active Goals</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GAMIFICATION LAYER: Level + Streak -->
+  <div class="gamification-row">
+    <div class="gamification-badge">
+      <div class="level-badge" id="idx-level">🏆 Level 1: Beginner</div>
+      <div class="streak-badge"><span class="badge-icon">⚡</span> <span id="idx-streak">0</span>-Day No Overspending Streak</div>
+    </div>
+    <div style="font-size:13px; color:var(--green2);" id="idx-points">✨ 0 wealth points</div>
+  </div>
+
+  <div class="section-header">
+    <div><div class="section-title">Wealth Overview</div><div class="section-sub">live metrics</div></div>
+    <a href="analytics.html" style="color:var(--orange);text-decoration:none;font-size:14px;">View all →</a>
+  </div>
+  <div class="cards-grid">
+    <div class="card orange">
+      <div style="display:flex;justify-content:space-between;">
+        <div class="card-icon" style="background:rgba(232,73,29,0.15);">💰</div>
+      </div>
+      <div class="card-val" id="c-saved">₹0</div>
+      <div style="color:var(--gray);font-size:13px;margin-top:4px;">Total Savings</div>
+    </div>
+    <div class="card purple">
+      <div style="display:flex;justify-content:space-between;">
+        <div class="card-icon" style="background:rgba(124,92,191,0.15);">📅</div>
+      </div>
+      <div class="card-val" id="c-balance">₹0</div>
+      <div style="color:var(--gray);font-size:13px;margin-top:4px;">Current Balance</div>
+    </div>
+    <div class="card blue">
+      <div style="display:flex;justify-content:space-between;">
+        <div class="card-icon" style="background:rgba(37,99,235,0.12);">📊</div>
+      </div>
+      <div class="card-val" id="c-vel">0%</div>
+      <div style="color:var(--gray);font-size:11px;margin-top:2px;">Savings per income</div>
+      <div style="color:var(--gray);font-size:13px;margin-top:6px;">Velocity</div>
+    </div>
+    <div class="card green">
+      <div style="display:flex;justify-content:space-between;">
+        <div class="card-icon" style="background:rgba(16,185,129,0.12);">🎯</div>
+      </div>
+      <div class="card-val" id="c-goals">0 Goals</div>
+      <div style="color:var(--gray);font-size:13px;margin-top:4px;">Active Goals</div>
+    </div>
+  </div>
+
+  <div class="section-header"><div class="section-title">Quick Actions</div></div>
+  <div class="actions-row">
+    <a href="add-income.html" onclick="return requireAuth(event, 'add-income.html')" class="action-btn">
+      <div style="font-size:24px;">💵</div>
+      <div><div style="font-weight:600;color:var(--white);">Add Income</div><div style="font-size:12px;color:var(--gray);">Record earnings</div></div>
+    </a>
+    <a href="add-expense.html" onclick="return requireAuth(event, 'add-expense.html')" class="action-btn">
+      <div style="font-size:24px;">💸</div>
+      <div><div style="font-weight:600;color:var(--white);">Add Expense</div><div style="font-size:12px;color:var(--gray);">Track spending</div></div>
+    </a>
+    <a href="create-goal.html" onclick="return requireAuth(event, 'create-goal.html')" class="action-btn">
+      <div style="font-size:24px;">🎯</div>
+      <div><div style="font-weight:600;color:var(--white);">Create Goal</div><div style="font-size:12px;color:var(--gray);">Set a target</div></div>
+    </a>
+    <a href="save-now.html" onclick="return requireAuth(event, 'save-now.html')" class="action-btn">
+      <div style="font-size:24px;">⚡</div>
+      <div><div style="font-weight:600;color:var(--white);">Smart Save</div><div style="font-size:12px;color:var(--gray);">Auto-invest surplus</div></div>
+    </a>
+  </div>
+
+  <!-- CASHBACK EARNED METRIC AND WEALTH COMPARISON -->
+  <div class="cashback-card" style="position: relative; overflow: hidden;">
+    <!-- Background glowing accent -->
+    <div style="position: absolute; right: -50px; top: -50px; width: 150px; height: 150px; background: #e8491d; filter: blur(80px); opacity: 0.3; border-radius: 50%;"></div>
+    
+    <div class="cb-left" style="z-index: 2; position: relative;">
+      <h3>🔄 Total Cashback Earned <span style="font-size:14px; background: #e8491d30; padding:2px 8px; border-radius:40px; border: 1px solid rgba(232,73,29,0.5);">Lifetime Total</span></h3>
+      
+      <!-- Big Cashback Counter -->
+      <div style="margin-top: 16px; margin-bottom: 24px;">
+        <div style="font-size: 13px; color: var(--gray); text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Standard Card Rewards</div>
+        <div style="font-size: 42px; font-weight: 900; color: #f97316; letter-spacing: -1px; text-shadow: 0 0 20px rgba(249,115,22,0.3);" id="idx-cashback">₹0</div>
+      </div>
+
+      <div class="comparison" style="margin-top: 0; background: rgba(0,0,0,0.3); padding: 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05);">
+        <div class="comparison-item" style="background: transparent; padding: 0; min-width: auto;">
+          <div class="comp-label">If you just took cashback</div>
+          <div class="comp-value" style="font-size: 18px; color:var(--gray);">Spent on extras</div>
+        </div>
+        <div style="font-size:24px; align-self:center; color: var(--gray);">VS</div>
+        <div class="comparison-item" style="background: transparent; padding: 0; min-width: auto;">
+          <div class="comp-label" style="color: white;">Flux Wealth Generated</div>
+          <div class="comp-value" style="font-size: 20px; color:#34d399;" id="idx-wealth">₹0</div>
+        </div>
+      </div>
+    </div>
+    <div class="cb-right" style="z-index: 2; position: relative;">
+      <div class="micro-save" style="background: rgba(16,185,129,0.1); border-color: #10b981; backdrop-filter: blur(5px);">
+        <div style="font-weight:600; display: flex; gap: 8px;">🤖 Last Auto-Save Trigger <span style="color:var(--green2);">(active)</span></div>
+        <div style="font-size: 26px; font-weight:800; margin: 6px 0 4px;" id="idx-autosave">₹0</div>
+        <div style="font-size:12px; color: rgba(255,255,255,0.8);">Flux detected surplus yesterday and automatically routed it into your high-yield goals.</div>
+        <a href="save-now.html" style="display:inline-block; background:var(--green2); border:1px solid var(--green2); border-radius:40px; padding:8px 18px; margin-top:14px; color:#000; font-weight: 700; cursor:pointer; text-decoration:none; box-shadow: 0 6px 15px rgba(52,211,153,0.3); transition: 0.2s;">View Smart Save →</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="panel">
+      <div class="section-header">
+        <div><div class="section-title">Recent Transactions</div><div class="section-sub">Latest activity</div></div>
+        <span style="color:var(--orange);text-decoration:none;font-size:14px;">All tracked</span>
+      </div>
+      <table class="tx-table">
+        <thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Amount</th><th>Description</th></tr></thead>
+        <tbody id="tx-tbody">
+          <!-- Populated dynamically -->
+        </tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <div class="section-header"><div><div class="section-title">🤖 AI Wealth Insights</div><div class="section-sub">cashback replacement intelligence</div></div></div>
+      <div class="insights-list">
+        <div class="insight"><div style="font-size:24px;">💰</div><div><div style="font-size:11px;font-weight:600;color:var(--green2);margin-bottom:4px;">SAVINGS VICTORY</div><div style="font-size:13px;line-height:1.5;">Instead of chasing ₹500 cashback, you saved <strong>₹3,200</strong> by reducing dining out — 6x more value!</div></div></div>
+        <div class="insight"><div style="font-size:24px;">⚠️</div><div><div style="font-size:11px;font-weight:600;color:var(--yellow);margin-bottom:4px;">CASHBACK TRAP AVOIDED</div><div style="font-size:13px;line-height:1.5;">Skipped extra ₹750 spending for 2% cashback → kept ₹750 in your pocket. Well done.</div></div></div>
+        <div class="insight"><div style="font-size:24px;">🎯</div><div><div style="font-size:11px;font-weight:600;color:var(--orange2);margin-bottom:4px;">SMART REDIRECT</div><div style="font-size:13px;line-height:1.5;">You redirected ₹1,200 that would've been cashback rewards into your <strong>Home goal</strong> — ahead of schedule.</div></div></div>
+        <div class="insight"><div style="font-size:24px;">📊</div><div><div style="font-size:11px;font-weight:600;color:var(--blue2);margin-bottom:4px;">WEALTH MULTIPLIER</div><div style="font-size:13px;line-height:1.5;">Your savings behaviour yields 18% more wealth than typical cashback users. Keep the momentum.</div></div></div>
+      </div>
+      
+      <div style="margin-top:24px; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 20px; padding: 20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+          <div style="font-size:14px; font-weight:700; color:var(--blue2); display:flex; align-items:center; gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            AI Linear Forecast
+          </div>
+          <span style="font-size:11px; background:rgba(37,99,235,0.2); padding:2px 8px; border-radius:10px; color:var(--blue2);">Model Active</span>
+        </div>
+        <p style="font-size:13px; color:var(--gray); margin-bottom:12px;">Predictive model analyzing your burn rate trajectory using Scikit-Learn.</p>
+        <div id="ai-forecast-content">
+          <div style="font-size:14px; color:var(--gray);">Loading predictive model...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="panel">
+      <div class="section-header">
+        <div><div class="section-title">🎯 Savings Goals</div><div class="section-sub">progress tracker</div></div>
+        <a href="goals.html" style="color:var(--orange);text-decoration:none;font-size:14px;">Manage →</a>
+      </div>
+      <div class="goals-grid" id="goals-grid">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+    <div class="panel">
+      <div class="section-header"><div><div class="section-title">📈 Monthly Trend</div><div class="section-sub">Income vs Expenses</div></div></div>
+      <div class="chart-area"><canvas id="trendChart" style="width:100%;height:180px;"></canvas></div>
+      <div style="display:flex;gap:20px;margin-top:12px;font-size:13px;color:var(--gray);">
+        <div><span style="display:inline-block;width:10px;height:10px;background:var(--green2);border-radius:50%;margin-right:5px;"></span>Income</div>
+        <div><span style="display:inline-block;width:10px;height:10px;background:var(--red2);border-radius:50%;margin-right:5px;"></span>Expenses</div>
+        <div><span style="display:inline-block;width:10px;height:10px;background:var(--purple2);border-radius:50%;margin-right:5px;"></span>Savings</div>
+      </div>
+    </div>
+  </div>
+  <!-- FINAL DIFFERENTIATION -->
+  <div class="section-header" style="margin-top: 60px;"><div><div class="section-title">Why FLUX?</div><div class="section-sub">Cashback vs Wealth</div></div></div>
+  <div class="panel" style="margin-bottom:40px; border-color:var(--orange); box-shadow: 0 10px 30px rgba(232,73,29,0.1);">
+    <table style="width:100%; border-collapse:collapse; text-align:left;">
+      <tr style="border-bottom:1px solid rgba(255,255,255,0.1);">
+        <th style="padding:16px; color:var(--gray);">&nbsp;</th>
+        <th style="padding:16px; color:var(--red2);">Cashback Apps</th>
+        <th style="padding:16px; color:var(--green2); font-weight:800; font-size:18px;">FLUX</th>
+      </tr>
+      <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+        <td style="padding:16px; font-weight:600;">Focus</td>
+        <td style="padding:16px; color:var(--gray);">Reward spending</td>
+        <td style="padding:16px; color:white; font-weight:600;">Reward discipline</td>
+      </tr>
+      <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+        <td style="padding:16px; font-weight:600;">Outcome</td>
+        <td style="padding:16px; color:var(--gray);">Instant reward</td>
+        <td style="padding:16px; color:white; font-weight:600;">Long-term wealth</td>
+      </tr>
+      <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+        <td style="padding:16px; font-weight:600;">Model</td>
+        <td style="padding:16px; color:var(--gray);">Static</td>
+        <td style="padding:16px; color:white; font-weight:600;">AI-driven</td>
+      </tr>
+      <tr>
+        <td style="padding:16px; font-weight:600;">Growth</td>
+        <td style="padding:16px; color:var(--gray);">No growth</td>
+        <td style="padding:16px; color:white; font-weight:600;">Predictable growth</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<footer>
+  <p style="margin-bottom:8px; font-size:16px; color:white; font-weight:600;">FLUX acts as an intelligent behavioral layer on top of Finvasia, onboarding users into investing through Shoonya.</p>
+  <p style="color:var(--gray); font-style:italic;">"FLUX turns your cashflow into wealth by automatically investing your everyday spending using AI-driven behavioral finance."</p>
+  <p style="margin-top:16px;">© 2026 <span style="color:var(--orange);">FLUX - AI Wealth Engine</span></p>
+</footer>
+
+<script>
+/* HERO CANVAS — animated coin & stairs (unchanged premium visual) */
+(function() {
+  const canvas = document.getElementById('heroCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let W, H, frame = 0;
+  function resize() {
+    W = canvas.offsetWidth;
+    H = canvas.offsetHeight;
+    canvas.width  = W * (window.devicePixelRatio || 1);
+    canvas.height = H * (window.devicePixelRatio || 1);
+    ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+  }
+  resize();
+  window.addEventListener('resize', () => { resize(); });
+
+  function drawStep(cx, cy, sw, sh, ambientGlow) {
+    const hw = sw * 0.5;
+    const hd = sw * 0.46;
+    const br = Math.floor(40 + ambientGlow * 35);
+    const bg_r = Math.floor(38 + ambientGlow * 28);
+    const bg_g = Math.floor(38 + ambientGlow * 22);
+    const bg_b = Math.floor(70 + ambientGlow * 50);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + hw, cy + hd * 0.5);
+    ctx.lineTo(cx, cy + hd);
+    ctx.lineTo(cx - hw, cy + hd * 0.5);
+    ctx.closePath();
+    ctx.fillStyle = `rgb(${bg_r},${bg_g},${bg_b})`;
+    ctx.fill();
+    ctx.strokeStyle = `rgba(160,150,230,${0.06 + ambientGlow * 0.08})`;
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx - hw, cy + hd * 0.5);
+    ctx.lineTo(cx, cy + hd);
+    ctx.lineTo(cx, cy + hd + sh);
+    ctx.lineTo(cx - hw, cy + hd * 0.5 + sh);
+    ctx.closePath();
+    ctx.fillStyle = `rgba(14,14,26,1)`;
+    ctx.fill();
+    ctx.strokeStyle = `rgba(100,100,160,0.08)`;
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx + hw, cy + hd * 0.5);
+    ctx.lineTo(cx, cy + hd);
+    ctx.lineTo(cx, cy + hd + sh);
+    ctx.lineTo(cx + hw, cy + hd * 0.5 + sh);
+    ctx.closePath();
+    ctx.fillStyle = `rgba(22,22,42,1)`;
+    ctx.fill();
+    ctx.strokeStyle = `rgba(100,100,160,0.05)`;
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+
+  function drawCoin(cx, cy, r, spinAngle, glowIntensity) {
+    const cosA = Math.cos(spinAngle);
+    const sinA = Math.abs(Math.sin(spinAngle));
+    const rx = r * Math.max(0.08, Math.abs(cosA));
+    const ry = r * 0.96;
+    const facePct = sinA;
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    const shadowX = cx + r * 0.22;
+    const shadowY = cy + ry * 0.6;
+    ctx.beginPath();
+    ctx.ellipse(shadowX, shadowY, rx * 0.8, ry * 0.18, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+    const glowR = r * (1.8 + facePct * 1.4);
+    const halo = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowR);
+    const glowA = (0.18 + facePct * 0.35) * glowIntensity;
+    halo.addColorStop(0, `rgba(220,210,255,${glowA})`);
+    halo.addColorStop(0.4, `rgba(160,130,255,${glowA * 0.55})`);
+    halo.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, glowR, glowR * 0.85, 0, 0, Math.PI * 2);
+    ctx.fillStyle = halo;
+    ctx.fill();
+    const bright = 0.7 + facePct * 0.3;
+    const metal = ctx.createRadialGradient(cx - rx * 0.28, cy - ry * 0.22, rx * 0.05, cx, cy, r);
+    const c0 = Math.floor(235 * bright);
+    const c1 = Math.floor(185 * bright);
+    const c2 = Math.floor(125 * bright);
+    const c3 = Math.floor(80 * bright);
+    metal.addColorStop(0, `rgb(${c0},${c0},${Math.floor(c0 * 1.05)})`);
+    metal.addColorStop(0.35, `rgb(${c1},${c1},${Math.floor(c1 * 1.06)})`);
+    metal.addColorStop(0.72, `rgb(${c2},${c2},${Math.floor(c2 * 1.08)})`);
+    metal.addColorStop(1, `rgb(${c3},${c3},${Math.floor(c3 * 1.1)})`);
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fillStyle = metal;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(230,230,255,${0.55 + facePct * 0.35})`;
+    ctx.lineWidth = Math.max(1, rx * 0.06);
+    ctx.stroke();
+    if (rx > r * 0.12) {
+      const detail = Math.min(1, (rx - r * 0.12) / (r * 0.5));
+      ctx.globalAlpha = detail * (0.25 + facePct * 0.2);
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx * 0.82, ry * 0.82, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(180,180,220,1)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx * 0.64, ry * 0.64, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(160,160,200,1)';
+      ctx.lineWidth = 0.7;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, W, H);
+    const N = 5, stepW = W * 0.56, stepH = H * 0.095;
+    const originX = W * 0.74, originY = H * 0.20;
+    const dX = stepW * 0.245, dY = stepW * 0.122 + stepH;
+    const steps = [];
+    for (let i = 0; i < N; i++) steps.push({ cx: originX - i * dX * 0.5, cy: originY + i * dY, sw: stepW * (0.48 + i * 0.036), sh: stepH });
+    const PERIOD = 300;
+    const t = frame % PERIOD;
+    const tNorm = t / PERIOD;
+    const stepPhaseRaw = tNorm * N;
+    const stepIdx = Math.floor(stepPhaseRaw);
+    const subPhase = stepPhaseRaw % 1;
+    const eased = subPhase < 0.5 ? 2 * subPhase * subPhase : 1 - Math.pow(-2 * subPhase + 2, 2) / 2;
+    const fromIdx = N - 1 - stepIdx;
+    const toIdx = Math.max(0, fromIdx - 1);
+    const fromStep = steps[fromIdx] || steps[0];
+    const toStep = steps[toIdx] || steps[0];
+    function stepTopY(s) { return s.cy + s.sw * 0.46 * 0.5; }
+    const baseX = fromStep.cx + (toStep.cx - fromStep.cx) * eased;
+    const baseY = stepTopY(fromStep) + (stepTopY(toStep) - stepTopY(fromStep)) * eased;
+    const hopH = stepH * 1.8;
+    const arcY = baseY - Math.sin(subPhase * Math.PI) * hopH;
+    const spinAngle = subPhase * Math.PI * 2.6 + stepIdx * Math.PI * 2.6;
+    const glowBase = 0.65 + 0.35 * Math.abs(Math.sin(spinAngle * 0.5));
+    const coinR = fromStep.sw * 0.225;
+    for (let i = 0; i < N; i++) {
+      const s = steps[i];
+      const dist = Math.abs(i - fromIdx + eased);
+      const glow = Math.max(0, 1 - dist * 0.7) * glowBase;
+      drawStep(s.cx, s.cy, s.sw, s.sh, glow);
+    }
+    drawCoin(baseX, arcY, coinR, spinAngle, glowBase);
+    frame++;
+    requestAnimationFrame(animate);
+  }
+  animate();
+})();
+
+/* TREND CHART */
+function drawTrendChart() {
+  const canvas = document.getElementById('trendChart');
+  if (!canvas) return;
+  const container = canvas.parentElement;
+  const cw = container.clientWidth;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = cw * dpr;
+  canvas.height = 180 * dpr;
+  canvas.style.width = `${cw}px`;
+  canvas.style.height = `180px`;
+  const c = canvas.getContext('2d');
+  c.scale(dpr, dpr);
+  const W = cw, H = 180;
+  const months = ['Oct','Nov','Dec','Jan','Feb','Mar','Apr'];
+  const income = [58000,62000,70000,60000,62000,65000,72500];
+  const expense = [44000,46000,55000,51200,48500,46200,43800];
+  const savings = [14000,16000,15000,8800,13500,18800,28700];
+  const maxVal = Math.max(...income) * 1.12;
+  const pL=42,pR=18,pT=18,pB=30;
+  const gW=W-pL-pR, gH=H-pT-pB;
+  const xi = i => pL + (i/(months.length-1))*gW;
+  const yi = v => pT + gH - (v/maxVal)*gH;
+  c.clearRect(0,0,W,H);
+  c.strokeStyle='rgba(255,255,255,0.05)'; c.lineWidth=0.8;
+  for(let i=0;i<=4;i++){const yy=pT+i*(gH/4);c.beginPath();c.moveTo(pL,yy);c.lineTo(W-pR,yy);c.stroke();}
+  function line(data,color,fill){
+    c.beginPath();
+    data.forEach((v,i)=>i===0?c.moveTo(xi(i),yi(v)):c.lineTo(xi(i),yi(v)));
+    c.strokeStyle=color; c.lineWidth=2.2; c.stroke();
+    c.beginPath();
+    data.forEach((v,i)=>i===0?c.moveTo(xi(i),yi(v)):c.lineTo(xi(i),yi(v)));
+    c.lineTo(xi(data.length-1),pT+gH); c.lineTo(xi(0),pT+gH); c.fillStyle=fill; c.fill();
+    data.forEach((v,i)=>{ c.beginPath(); c.arc(xi(i),yi(v),3.5,0,Math.PI*2); c.fillStyle=color; c.fill(); c.strokeStyle='#080810'; c.lineWidth=1.5; c.stroke(); });
+  }
+  line(income, '#34d399','rgba(52,211,153,0.06)');
+  line(expense,'#f87171','rgba(248,113,113,0.06)');
+  line(savings,'#9b79e0','rgba(155,121,224,0.08)');
+  c.fillStyle='rgba(136,136,170,0.85)'; c.font='11px Inter'; c.textAlign='center';
+  months.forEach((m,i)=>c.fillText(m,xi(i),H-9));
+}
+window.addEventListener('resize', drawTrendChart);
+drawTrendChart();
+
+/* SCROLL REVEAL */
+const obs = new IntersectionObserver(entries => { entries.forEach(e => { if (e.isIntersecting) { e.target.style.opacity = '1'; e.target.style.transform = 'translateY(0)'; } }); }, { threshold:0.08, rootMargin:'0px 0px -20px 0px' });
+document.querySelectorAll('.card,.panel,.action-btn,.goal-card,.cashback-card,.gamification-row').forEach(el => { el.style.opacity = '0'; el.style.transform = 'translateY(20px)'; el.style.transition = 'opacity 0.5s cubic-bezier(0.2,0.9,0.4,1.1), transform 0.5s ease'; obs.observe(el); });
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
+<script src="app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  await initAppPromise;
+  const stats = await getDashboard();
+  const goals = await getGoals();
+  const txs = await getTransactions();
+  const gami = await getGamification();
+
+  // Load Predict Forecast
+  try {
+    const fcRes = await fetch('/api/predict-forecast');
+    if (fcRes.ok) {
+      const forecast = await fcRes.json();
+      const fcDiv = document.getElementById('ai-forecast-content');
+      if (forecast.can_predict) {
+        let trendColor = forecast.trend === 'increasing' ? 'var(--red2)' : (forecast.trend === 'decreasing' ? 'var(--green2)' : 'var(--purple2)');
+        let trendIcon = forecast.trend === 'increasing' ? '📈' : (forecast.trend === 'decreasing' ? '📉' : '➖');
+        fcDiv.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+            <div>
+              <div style="font-size:11px; color:var(--gray); text-transform:uppercase;">Next 7 Days Trajectory</div>
+              <div style="font-size:24px; font-weight:800; margin-top:4px;">+${formatCur(forecast.predicted_next_week)}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:12px; color:var(--gray);">Trend</div>
+              <div style="font-size:14px; font-weight:600; color:${trendColor};">${trendIcon} ${forecast.trend}</div>
+            </div>
+          </div>
+        `;
+      } else {
+        fcDiv.innerHTML = `<div style="font-size:13px; color:var(--orange2);">Need at least 3 active days of specific logs to generate trajectory.</div>`;
+      }
+    }
+  } catch(e) { console.error('AI forecast fail', e); }
+
+  // Hero stats
+  document.getElementById('h-saved').innerText = formatCur(stats.totalSaved);
+  document.getElementById('h-vel').innerText = stats.wealthVelocity;
+  document.getElementById('h-goals').innerText = goals.length;
+
+  // Wealth overview cards
+  document.getElementById('c-saved').innerText = formatCur(stats.totalSaved);
+  document.getElementById('c-balance').innerText = formatCur(stats.balance);
+  document.getElementById('c-vel').innerText = stats.wealthVelocity;
+  document.getElementById('c-goals').innerText = `${goals.length} Goals`;
+
+  // Gamification row
+  document.getElementById('idx-level').innerText = `🏆 Level ${gami.level}`;
+  document.getElementById('idx-streak').innerText = gami.streak_days;
+  document.getElementById('idx-points').innerText = `✨ ${gami.points} wealth points`;
+
+  // Cashback card — show real data
+  const cashbackEquiv = stats.expenses * 0.02; // what 2% cashback would have been
+  document.getElementById('idx-cashback').innerText = formatCur(cashbackEquiv);
+  document.getElementById('idx-wealth').innerText = formatCur(stats.totalSaved);
+  document.getElementById('idx-autosave').innerText = formatCur(stats.investments);
+
+  // Populate transactions
+  const txTbody = document.getElementById('tx-tbody');
+  if (txs.length === 0) {
+    txTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--gray);padding:24px;">No transactions yet. Start tracking!</td></tr>`;
+  } else {
+    txTbody.innerHTML = txs.slice(0, 5).map(tx => {
+      let typeHtml = '';
+      let amountHtml = '';
+      if (tx.type === 'income') { typeHtml = `<span class="tx-type tx-income">⬆ Income</span>`; amountHtml = `<td class="tx-amount pos" style="font-weight:600;">+${formatCur(tx.amount)}</td>`; }
+      else if (tx.type === 'expense') { typeHtml = `<span class="tx-type tx-expense">⬇ Expense</span>`; amountHtml = `<td class="tx-amount neg" style="font-weight:600;">−${formatCur(tx.amount)}</td>`; }
+      else if (tx.type === 'save') { typeHtml = `<span class="tx-type tx-save">💾 Save</span>`; amountHtml = `<td style="font-weight:600;color:var(--purple2);">${formatCur(tx.amount)}</td>`; }
+
+      return `<tr>
+        <td style="color:var(--gray);font-size:12px;">${formatDate(tx.date)}</td>
+        <td>${typeHtml}</td>
+        <td><span style="background:rgba(255,255,255,0.05);padding:4px 10px;border-radius:40px;font-size:12px;">${tx.category}</span></td>
+        ${amountHtml}
+        <td style="color:var(--gray);">${tx.description}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Populate goals
+  const gGrid = document.getElementById('goals-grid');
+  if (goals.length === 0) {
+    gGrid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--gray);">No goals active. Create one to lock your wealth.</div>`;
+  } else {
+    gGrid.innerHTML = goals.slice(0, 4).map(g => {
+      const pct = Math.min(100, Math.round((g.currentAmount / g.targetAmount) * 100));
+      return `<div class="goal-card">
+        <div style="display:flex;gap:12px;margin-bottom:12px;">
+          <div style="font-size:28px;">${g.icon}</div>
+          <div><div style="font-weight:600;">${g.title}</div><div style="font-size:12px;color:var(--gray);">${formatCur(g.targetAmount)} target</div></div>
+        </div>
+        <div style="height:6px;background:rgba(255,255,255,0.1);border-radius:10px;">
+          <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--orange),#ff8c42);border-radius:10px;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:10px;">
+          <span style="color:var(--orange);font-weight:600;">${formatCur(g.currentAmount)}</span>
+          <span style="color:var(--gray);">${pct}%</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Initialize Vanilla Tilt 3D Effects
+  if (typeof VanillaTilt !== "undefined") {
+    VanillaTilt.init(document.querySelectorAll(".card, .action-btn, .cashback-card, .goal-card, .insight, .panel"), {
+        max: 5,
+        speed: 400,
+        glare: true,
+        "max-glare": 0.1,
+        perspective: 1000,
+        scale: 1.02
+    });
+  }
+});
+</script>
+</body>
+</html>

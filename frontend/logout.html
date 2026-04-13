@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logging Out - Flux</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { margin:0; height:100vh; background:#08080f; color:white; font-family:'Inter',sans-serif; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .msg { text-align:center; animation: fadeOut 1.5s forwards; animation-delay: 1.5s; }
+    h1 { font-size:32px; font-weight:800; background:linear-gradient(135deg,#e8491d,#7c5cbf); -webkit-background-clip:text; color:transparent; margin-bottom:10px; }
+    .loader { width:150px; height:2px; background:rgba(255,255,255,0.1); margin:0 auto; overflow:hidden; border-radius:2px; }
+    .fill { width:100%; height:100%; background:#34d399; animation: load 1.5s linear forwards; }
+    @keyframes load { 0% { transform:translateX(-100%); } 100% { transform:translateX(0); } }
+    @keyframes fadeOut { 100% { opacity:0; } }
+  </style>
+  <script>
+    setTimeout(() => {
+      localStorage.removeItem('flux_user');
+      localStorage.removeItem('flux_transactions');
+      localStorage.removeItem('flux_goals');
+      window.location.href = 'index.html'; // redirect to main landing
+    }, 2800);
+  </script>
+</head>
+<body>
+  <div class="msg">
+    <h1>Securing Wealth Engine.</h1>
+    <div style="color:#8888aa;font-size:14px;margin-bottom:20px;">Session ending...</div>
+    <div class="loader"><div class="fill"></div></div>
+  </div>
+</body>
+</html>

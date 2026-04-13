@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Login - Flux</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #08080f; --bg2: #0e0e1a; --card: #12121e; --card2: #181828;
+      --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+      --white: #ffffff; --gray: #8888aa;
+      --orange: #e8491d; --orange2: #ff5722;
+      --purple: #7c5cbf; --blue: #2563eb; --green: #10b981;
+    }
+    body { background:var(--bg); color:var(--white); font-family:'Inter', sans-serif; display:flex; align-items:center; justify-content:center; min-height:100vh; overflow:hidden; }
+
+    /* Animated background */
+    .bg-animation {
+      position: absolute; top:0; left:0; width:100%; height:100%; z-index:-1;
+      background: radial-gradient(circle at 15% 50%, rgba(232,73,29,0.08), transparent 40%),
+                  radial-gradient(circle at 85% 30%, rgba(124,92,191,0.08), transparent 40%);
+    }
+
+    .login-container {
+      background: rgba(24, 24, 40, 0.8);
+      border: 1px solid var(--border2);
+      border-radius: 32px;
+      padding: 40px;
+      width: 100%;
+      max-width: 440px;
+      position: relative;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+      backdrop-filter: blur(20px);
+      animation: slideUp 0.6s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+      overflow: hidden;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(40px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .logo-header { text-align:center; margin-bottom: 32px; transition: 0.3s; }
+    .nav-logo {
+      width: 54px; height: 54px; border-radius: 18px; margin: 0 auto 16px;
+      background: linear-gradient(135deg, var(--orange), #ff8c42);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 28px; color: white;
+      box-shadow: 0 0 24px var(--glow-orange);
+    }
+    .title { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+    .subtitle { color: var(--gray); font-size: 14px; }
+
+    .form-group { margin-bottom: 20px; text-align: left; transition: all 0.3s ease; }
+    .form-group label { display: block; font-size: 13px; color: var(--gray); margin-bottom: 8px; font-weight:500; }
+    .form-group input {
+      width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+      color: white; padding: 14px 16px; border-radius: 16px; font-size: 15px; outline: none; transition: 0.2s;
+    }
+    .form-group input:focus { border-color: var(--orange); box-shadow: 0 0 0 4px rgba(232,73,29,0.15); }
+
+    .btn-submit {
+      width: 100%; background: var(--orange); border: none; color: white;
+      padding: 16px; border-radius: 16px; font-size: 16px; font-weight: 600;
+      cursor: pointer; transition: 0.2s; box-shadow: 0 10px 25px rgba(232,73,29,0.25);
+      margin-top: 10px;
+    }
+    .btn-submit:hover { transform: translateY(-3px); background: var(--orange2); box-shadow: 0 15px 35px rgba(232,73,29,0.35); }
+
+    .hidden { display: none !important; }
+    .fade-in { animation: fadeIn 0.4s forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .error-msg {
+      background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171; font-size: 13px; padding: 12px; border-radius: 12px;
+      margin-bottom: 20px; text-align: center; display: none;
+    }
+    .back-btn {
+      background: none; border: none; color: var(--gray); font-size: 13px; font-weight: 500; cursor: pointer; text-decoration: underline; margin-top: 20px; display: block; text-align: center; width: 100%; transition: 0.2s;
+    }
+    .back-btn:hover { color: var(--white); }
+
+    #loadingOverlay {
+        position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(18,18,30,0.8); backdrop-filter:blur(4px); display:none; align-items:center; justify-content:center; z-index: 20; color:white; font-weight: 600; flex-direction: column; gap:12px;
+    }
+    .spinner { border: 3px solid rgba(255,255,255,0.1); border-left-color: var(--orange); border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+  </style>
+</head>
+<body>
+
+<div class="bg-animation"></div>
+
+<div class="login-container">
+  <div id="loadingOverlay"><div class="spinner"></div><span id="loadText">Processing...</span></div>
+
+  <div class="logo-header">
+    <div class="nav-logo">⚡</div>
+    <h1 class="title" id="mainTitle">Join Flux</h1>
+    <p class="subtitle" id="subTitle">Enter your email to initiate your wealth engine.</p>
+  </div>
+
+  <div class="error-msg" id="errorMsg"></div>
+
+  <!-- Step 1: Email -->
+  <div id="step1">
+    <div class="form-group">
+      <label>Email Address</label>
+      <input type="email" id="emailInput" placeholder="john@example.com" required>
+    </div>
+    <button class="btn-submit" onclick="handleEmailSubmit()">Continue →</button>
+  </div>
+
+  <!-- Step 2: Name (Only for Signup) -->
+  <div id="step2" class="hidden">
+    <div class="form-group fade-in">
+      <label>Full Name</label>
+      <input type="text" id="nameInput" placeholder="John Doe">
+    </div>
+    <button class="btn-submit fade-in" onclick="handleNameSubmit()">Send OTP</button>
+    <button class="back-btn fade-in" onclick="goBack(1)">← Back to email</button>
+  </div>
+
+  <!-- Step 3: OTP -->
+  <div id="step3" class="hidden">
+    <div class="form-group fade-in">
+      <label>Verification Code</label>
+      <input type="text" id="otpInput" placeholder="6-digit code" maxlength="6" style="text-align:center; font-size: 20px; font-weight: 600; letter-spacing: 4px;">
+    </div>
+    <button class="btn-submit fade-in" onclick="handleOtpSubmit()">Verify & Launch</button>
+    <button class="back-btn fade-in" onclick="goBack(1)">← Change email</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+  let userEmail = "";
+  let isSignup = false;
+
+  const showError = (msg) => {
+    const el = document.getElementById('errorMsg');
+    el.innerText = msg;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+  }
+
+  const showLoading = (text) => {
+    document.getElementById('loadText').innerText = text;
+    document.getElementById('loadingOverlay').style.display = 'flex';
+  }
+  const hideLoading = () => {
+    document.getElementById('loadingOverlay').style.display = 'none';
+  }
+
+  async function requestOtp(email, name = "") {
+    try {
+      showLoading("Sending OTP...");
+      const res = await fetch('/api/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name })
+      });
+      const data = await res.json();
+      hideLoading();
+
+      if (data.requiresName) {
+        isSignup = true;
+        document.getElementById('step1').classList.add('hidden');
+        document.getElementById('step2').classList.remove('hidden');
+        document.getElementById('mainTitle').innerText = "Create Account";
+        document.getElementById('subTitle').innerText = "Join the gamified wealth engine.";
+        document.getElementById('nameInput').focus();
+      } else if (data.success) {
+        document.getElementById('step1').classList.add('hidden');
+        document.getElementById('step2').classList.add('hidden');
+        document.getElementById('step3').classList.remove('hidden');
+        document.getElementById('mainTitle').innerText = "Check your email";
+        document.getElementById('subTitle').innerText = `We just sent a code to ${email}`;
+        document.getElementById('otpInput').focus();
+      } else {
+        showError(data.error || "An error occurred");
+      }
+    } catch(e) {
+      hideLoading();
+      showError("Connection error. Ensure backend is running.");
+      console.error(e);
+    }
+  }
+
+  async function verifyOtp(email, otp) {
+    try {
+      showLoading("Verifying code...");
+      const res = await fetch('/api/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp })
+      });
+      const data = await res.json();
+      hideLoading();
+
+      if (data.success) {
+        // Initial Balance Logic is removed from OTP since it's backend now, 
+        // they can add income after logging in.
+        window.location.href = data.redirect;
+      } else {
+        showError(data.error || "Invalid OTP code");
+        document.getElementById('otpInput').value = "";
+      }
+    } catch(e) {
+      hideLoading();
+      showError("Connection error. Ensure backend is running.");
+      console.error(e);
+    }
+  }
+
+  function handleEmailSubmit() {
+    const email = document.getElementById('emailInput').value.trim();
+    if (!email || !email.includes('@')) {
+      showError("Please enter a valid email address");
+      return;
+    }
+    userEmail = email;
+    requestOtp(email);
+  }
+
+  function handleNameSubmit() {
+    const name = document.getElementById('nameInput').value.trim();
+    if (!name) {
+      showError("Please enter your name to proceed");
+      return;
+    }
+    requestOtp(userEmail, name);
+  }
+
+  function handleOtpSubmit() {
+    const otp = document.getElementById('otpInput').value.trim();
+    if (otp.length !== 6) {
+      showError("Please enter the 6-digit OTP");
+      return;
+    }
+    verifyOtp(userEmail, otp);
+  }
+
+  function goBack(step) {
+    document.getElementById('step1').classList.add('hidden');
+    document.getElementById('step2').classList.add('hidden');
+    document.getElementById('step3').classList.add('hidden');
+    
+    if (step === 1) {
+      document.getElementById('step1').classList.remove('hidden');
+      document.getElementById('mainTitle').innerText = "Join Flux";
+      document.getElementById('subTitle').innerText = "Enter your email to initiate your wealth engine.";
+      isSignup = false;
+    }
+  }
+
+  document.getElementById('emailInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') handleEmailSubmit(); });
+  document.getElementById('nameInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') handleNameSubmit(); });
+  document.getElementById('otpInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') handleOtpSubmit(); });
+
+</script>
+</body>
+</html>

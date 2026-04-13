@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Goals - Flux</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #08080f; --bg2: #0e0e1a; --card: #12121e; --card2: #181828;
+      --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+      --white: #ffffff; --gray: #8888aa;
+      --orange: #e8491d; --purple: #7c5cbf; --blue: #2563eb; --teal: #06b6d4;
+    }
+    body { background:var(--bg); color:var(--white); font-family:'Inter', sans-serif; overflow-x:hidden; min-height:100vh; }
+    
+    .navbar {
+      position:fixed; top:18px; left:50%; transform:translateX(-50%); width:calc(100% - 40px); max-width:1280px;
+      background:rgba(12,12,22,0.82); backdrop-filter:blur(20px); border:1px solid var(--border2); border-radius:28px;
+      padding:0 26px; height:68px; display:flex; align-items:center; justify-content:space-between; z-index:1000;
+    }
+    .nav-brand { display:flex; align-items:center; gap:12px; text-decoration:none; color: white; }
+    .nav-logo { width:38px; height:38px; border-radius:14px; background:linear-gradient(135deg,var(--orange),#ff8c42); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:20px; }
+    .nav-center { display:flex; gap:6px; }
+    .nav-link { color:var(--gray); font-size:14px; font-weight:500; text-decoration:none; padding:8px 16px; border-radius:40px; transition:all 0.2s; }
+    .nav-link:hover, .nav-link.active { color:var(--white); background:rgba(255,255,255,0.07); }
+    .nav-right { display:flex; align-items:center; gap:12px; }
+    .btn-logout { border:1px solid var(--border2); color:var(--gray); padding:7px 18px; border-radius:40px; font-size:13px; text-decoration:none; }
+
+    .main { max-width:1280px; margin:0 auto; padding:110px 24px 60px; }
+
+    .header-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px; }
+    .header-row h1 { font-size: 38px; font-weight: 800; letter-spacing: -1px; }
+    .btn-create { background: var(--orange); padding: 12px 24px; border-radius: 40px; color: white; text-decoration: none; font-weight: 600; box-shadow: 0 8px 20px rgba(232,73,29,0.3); transition: 0.2s; }
+    .btn-create:hover { transform: translateY(-2px); box-shadow: 0 12px 25px rgba(232,73,29,0.5); }
+
+    .gems-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
+    
+    .gem-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 32px; padding: 24px;
+      position: relative; overflow: hidden; transition: 0.3s;
+    }
+    .gem-card:hover { transform: translateY(-5px); border-color: rgba(255,255,255,0.2); }
+    
+    .canvas-wrap { width: 100%; height: 200px; margin-bottom: 20px; border-radius: 20px; background: radial-gradient(circle, var(--card2), var(--card)); }
+    .canvas-wrap canvas { width: 100%; height: 100%; display: block; outline: none; }
+    
+    .goal-info h3 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+    .goal-target { font-size: 14px; color: var(--gray); margin-bottom: 16px; }
+    .progress-bar { height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
+    .progress-fill { height: 100%; border-radius: 10px; }
+    .progress-stats { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; }
+
+    /* Colors */
+    .c-orange { background: linear-gradient(90deg, var(--orange), #ff8c42); }
+    .text-orange { color: var(--orange); }
+    
+    .c-purple { background: linear-gradient(90deg, var(--purple), #9b79e0); }
+    .text-purple { color: var(--purple); }
+    
+    .c-blue { background: linear-gradient(90deg, var(--blue), #60a5fa); }
+    .text-blue { color: var(--blue); }
+
+    @media(max-width:900px) {
+      .gems-container { grid-template-columns: 1fr 1fr; }
+    }
+    @media(max-width:600px) {
+      .gems-container { grid-template-columns: 1fr; }
+      .header-row { flex-direction: column; align-items: flex-start; gap: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="nav-brand">
+    <div class="nav-logo">⚡</div>
+    <div style="font-weight:700; font-size:20px;">Flux</div>
+  </a>
+  <div class="nav-center">
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+    <a href="analytics.html" class="nav-link">Analytics</a>
+    <a href="goals.html" class="nav-link active">Goals</a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-user"></div>
+    <a href="logout.html" class="btn-logout">Log out</a>
+  </div>
+</nav>
+
+<div class="main">
+  <div class="header-row">
+    <div>
+      <h1>Wealth Milestones</h1>
+      <p style="color:var(--gray); margin-top: 8px;">Gamified targets fueled by your Smart Saves.</p>
+    </div>
+    <a href="create-goal.html" onclick="return requireAuth(event, 'create-goal.html')" class="btn-create">+ Create Goal</a>
+  </div>
+
+  <div class="gems-container" id="g-container">
+    <!-- Populated dynamically -->
+  </div>
+
+  <div style="margin-top: 60px; display: none;" id="completed-section">
+    <div style="display:flex; align-items:center; gap: 12px; margin-bottom: 24px;">
+      <h2 style="font-size: 24px; font-weight: 800; color: var(--green2);">🏆 Completed Milestones</h2>
+      <div style="height: 1px; flex: 1; background: rgba(52,211,153,0.3);"></div>
+    </div>
+    <div class="gems-container" id="completed-container"></div>
+  </div>
+</div>
+
+<script>
+  // Function to initialize a 3D gem in a given container
+  function initGem(containerId, colorHex, geometryType) {
+    const container = document.getElementById(containerId);
+    if(!container) return;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+    camera.position.z = 5;
+
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
+
+    let geometry;
+    if(geometryType === 'octahedron') geometry = new THREE.OctahedronGeometry(1.5, 0);
+    else if(geometryType === 'dodecahedron') geometry = new THREE.DodecahedronGeometry(1.3, 0);
+    else geometry = new THREE.TetrahedronGeometry(1.5, 0);
+
+    const material = new THREE.MeshPhysicalMaterial({
+      color: colorHex,
+      metalness: 0.1,
+      roughness: 0.1,
+      transmission: 0.9, // glass-like
+      thickness: 0.5,
+      envMapIntensity: 1.0,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.1
+    });
+
+    const gem = new THREE.Mesh(geometry, material);
+    scene.add(gem);
+
+    // Inner wireframe for sci-fi look
+    const wireMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.1 });
+    const wire = new THREE.Mesh(geometry, wireMat);
+    gem.add(wire);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    
+    const pointLight = new THREE.PointLight(colorHex, 2);
+    pointLight.position.set(2, 3, 4);
+    scene.add(pointLight);
+
+    const pointLight2 = new THREE.PointLight(0xffffff, 1);
+    pointLight2.position.set(-2, -3, -4);
+    scene.add(pointLight2);
+
+    let isDragging = false;
+    let previousMousePosition = { x: 0, y: 0 };
+
+    renderer.domElement.addEventListener('mousedown', () => isDragging = true);
+    renderer.domElement.addEventListener('mouseup', () => isDragging = false);
+    renderer.domElement.addEventListener('mouseleave', () => isDragging = false);
+    renderer.domElement.addEventListener('mousemove', (e) => {
+      if(isDragging) {
+        const deltaMove = { x: e.offsetX - previousMousePosition.x, y: e.offsetY - previousMousePosition.y };
+        gem.rotation.y += deltaMove.x * 0.01;
+        gem.rotation.x += deltaMove.y * 0.01;
+      }
+      previousMousePosition = { x: e.offsetX, y: e.offsetY };
+    });
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      if(!isDragging) {
+        gem.rotation.y += 0.005;
+        gem.rotation.x += 0.002;
+      }
+      gem.position.y = Math.sin(clock.getElapsedTime() * 2) * 0.1; // Float effect
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+  }
+
+  window.addEventListener('DOMContentLoaded', async () => {
+    await initAppPromise;
+    const goals = await getGoals();
+    const container = document.getElementById('g-container');
+
+    if (goals.length === 0) {
+      container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--gray);">No goals active. Create a new milestone to track your wealth.</div>`;
+    } else {
+      const styles = [
+        { cHex: 0xe8491d, cType: 'octahedron', cClass: 'c-orange', tClass: 'text-orange' },
+        { cHex: 0x7c5cbf, cType: 'dodecahedron', cClass: 'c-purple', tClass: 'text-purple' },
+        { cHex: 0x2563eb, cType: 'tetrahedron', cClass: 'c-blue', tClass: 'text-blue' }
+      ];
+
+      let html = '';
+      let completedHtml = '';
+      let hasCompleted = false;
+      let hasActive = false;
+
+      goals.forEach((g, i) => {
+        const style = styles[i % styles.length];
+        const pct = Math.min(100, Math.round((g.currentAmount / g.targetAmount) * 100));
+        
+        let cardHtml = `<div class="gem-card" id="goal-card-${g.id}">
+          <div class="canvas-wrap" id="canvas-g${g.id}"></div>
+          <div class="goal-info">
+            <h3>${g.icon} ${g.title}</h3>
+            <div class="goal-target">Target: ${formatCur(g.targetAmount)}</div>
+            <div class="progress-bar"><div class="progress-fill ${style.cClass}" style="width: ${pct}%;"></div></div>
+            <div class="progress-stats">
+              <span class="${style.tClass}">${formatCur(g.currentAmount)}</span>
+              <span style="color:var(--gray)">${pct}%</span>
+            </div>`;
+            
+        if (pct < 100) {
+            hasActive = true;
+            cardHtml += `
+            <div style="margin-top:16px; display:flex; gap:8px;">
+               <input type="number" id="fund-amt-${g.id}" placeholder="₹ Amount" style="flex:1; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:white; padding:8px 12px; border-radius:10px; font-family:'Inter', sans-serif;">
+               <button onclick="fundGoal('${g.id}', ${g.targetAmount}, ${g.currentAmount})" style="background:var(--card2); border:1px solid var(--border); color:white; padding:8px 16px; border-radius:10px; cursor:pointer; font-weight:600; font-family:'Inter', sans-serif;">Fund Goal</button>
+            </div>
+            <div id="fund-msg-${g.id}" style="font-size:12px; color:var(--green2); margin-top:8px; display:none;">Successfully funded!</div>`;
+            html += cardHtml + `</div></div>`;
+        } else {
+            hasCompleted = true;
+            const completionDate = g.completed_date ? `Completed on ${g.completed_date}` : "Target Reached! 🎉";
+            cardHtml += `
+            <div style="margin-top: 16px; font-size:13px; font-weight:700; color:var(--green2); background:rgba(52,211,153,0.1); padding:10px; border-radius:8px; text-align:center;">
+              ${completionDate}
+            </div>`;
+            completedHtml += cardHtml + `</div></div>`;
+        }
+      });
+      
+      container.innerHTML = hasActive ? html : `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--gray);">All goals are completed! Time to set a new milestone.</div>`;
+      
+      if (hasCompleted) {
+         document.getElementById('completed-section').style.display = 'block';
+         document.getElementById('completed-container').innerHTML = completedHtml;
+      }
+
+      // Add the global function for the inline onclick handler
+      window.fundGoal = async (id, target, current) => {
+         const amtStr = document.getElementById(`fund-amt-${id}`).value;
+         let amt = parseFloat(amtStr);
+         if(isNaN(amt) || amt <= 0) return alert("Enter a valid amount to fund.");
+         
+         if (current + amt > target) {
+             amt = target - current; // Cap the funding to complete the goal perfectly
+         }
+         
+         const msg = document.getElementById(`fund-msg-${id}`);
+         msg.style.display = 'none';
+         
+         // Call the update API from app.js
+         const res = await updateGoal(id, amt);
+         if(res.error) {
+            alert(res.error);
+         } else {
+            msg.innerText = `Successfully funded ₹${amt}!`;
+            msg.style.display = 'block';
+            setTimeout(() => { window.location.reload(); }, 1200); // refresh to show gem update
+         }
+      };
+
+      // initialize 3D canvases
+      goals.forEach((g, i) => {
+        const style = styles[i % styles.length];
+        initGem(`canvas-g${g.id}`, style.cHex, style.cType);
+      });
+    }
+  });
+</script>
+<script src="app.js"></script>
+</body>
+</html>

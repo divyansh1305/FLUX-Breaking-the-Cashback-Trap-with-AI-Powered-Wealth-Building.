@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>User Profile - Flux</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #08080f; --bg2: #0e0e1a; --card: #12121e; --card2: #181828;
+      --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+      --white: #ffffff; --gray: #8888aa;
+      --orange: #e8491d; --purple: #7c5cbf; --blue: #2563eb; --green: #10b981;
+    }
+    body { background:var(--bg); color:var(--white); font-family:'Inter', sans-serif; min-height:100vh; overflow-x:hidden; }
+
+    .navbar {
+      position:fixed; top:18px; left:50%; transform:translateX(-50%); width:calc(100% - 40px); max-width:1280px;
+      background:rgba(12,12,22,0.82); backdrop-filter:blur(20px); border:1px solid var(--border2); border-radius:28px;
+      padding:0 26px; height:68px; display:flex; align-items:center; justify-content:space-between; z-index:1000;
+    }
+    .nav-brand { display:flex; align-items:center; gap:12px; text-decoration:none; color: white; }
+    .nav-logo { width:38px; height:38px; border-radius:14px; background:linear-gradient(135deg,var(--orange),#ff8c42); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:20px; }
+    .nav-center { display:flex; gap:6px; }
+    .nav-link { color:var(--gray); font-size:14px; font-weight:500; text-decoration:none; padding:8px 16px; border-radius:40px; transition:0.2s; }
+    .nav-link:hover { color:var(--white); background:rgba(255,255,255,0.07); }
+    .nav-right { display:flex; align-items:center; gap:12px; }
+    .nav-user { display:flex; align-items:center; gap:10px; padding:6px 14px 6px 12px; background:var(--card2); border-radius:40px; border:1px solid var(--border); font-size:13px; }
+    .btn-logout { border:1px solid var(--border2); color:var(--gray); padding:7px 18px; border-radius:40px; font-size:13px; text-decoration:none; transition:0.2s; }
+    .btn-logout:hover { color:var(--orange); border-color:var(--orange); }
+
+    .main { max-width: 800px; margin: 140px auto 60px; padding: 0 24px; animation: fade 0.5s ease; }
+    @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .profile-card { background: var(--card2); border: 1px solid var(--border2); border-radius: 32px; padding: 40px; display:flex; align-items:center; gap: 32px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); margin-bottom: 32px; }
+    .profile-avatar { width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, var(--purple), var(--blue)); display:flex; align-items:center; justify-content:center; font-size: 48px; font-weight: 800; border: 4px solid var(--bg); box-shadow: 0 0 0 2px rgba(124,92,191,0.5); }
+    .profile-info h1 { font-size: 32px; margin-bottom: 8px; }
+    .profile-info p { color: var(--gray); font-size: 15px; margin-bottom: 4px; }
+    
+    .stats-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .stat-box { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 24px; }
+    .stat-box .lbl { color: var(--gray); font-size: 13px; margin-bottom: 8px; }
+    .stat-box .val { font-size: 28px; font-weight: 700; }
+
+    @media(max-width: 600px) {
+      .profile-card { flex-direction: column; text-align: center; }
+      .stats-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="nav-brand">
+    <div class="nav-logo">⚡</div>
+    <div style="font-weight:700; font-size:20px;">Flux</div>
+  </a>
+  <div class="nav-center">
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+    <a href="analytics.html" class="nav-link">Analytics</a>
+    <a href="goals.html" class="nav-link">Goals</a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-user"></div>
+  </div>
+</nav>
+
+<div class="main">
+  <div class="profile-card">
+    <div class="profile-avatar" id="profAvatar">JD</div>
+    <div class="profile-info">
+      <h1 id="profName">John Doe</h1>
+      <p id="profEmail">john@example.com</p>
+      <p style="margin-top: 12px; display:inline-block; background:rgba(16,185,129,0.15); color:var(--green); padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600;">ACTIVE MEMBER</p>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-box">
+      <div class="lbl">Total Saved via Flux</div>
+      <div class="val" id="profSaved" style="color:var(--purple);">₹0</div>
+    </div>
+    <div class="stat-box">
+      <div class="lbl">Current Balance</div>
+      <div class="val" id="profBalance" style="color:var(--green);">₹0</div>
+    </div>
+  </div>
+
+  <div class="activity-section" style="margin-top: 40px;">
+    <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 16px;">System Activity Log</h2>
+    <div style="background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 20px; overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; min-width: 500px;">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--border); text-align: left;">
+            <th style="padding: 12px; color: var(--gray); font-size: 13px; font-weight: 500;">Action</th>
+            <th style="padding: 12px; color: var(--gray); font-size: 13px; font-weight: 500;">Description</th>
+            <th style="padding: 12px; color: var(--gray); font-size: 13px; font-weight: 500;">Time</th>
+          </tr>
+        </thead>
+        <tbody id="activity-log">
+          <!-- Dynamically populated -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    await initAppPromise;
+    if(!await requireAuth(null, null)) return;
+
+    if (appState.user) {
+      document.getElementById('profName').innerText = appState.user.name;
+      document.getElementById('profEmail').innerText = appState.user.email;
+      const nameStr = appState.user.name || "User";
+      const initials = nameStr.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+      document.getElementById('profAvatar').innerText = initials;
+    }
+
+    const stats = await getDashboard();
+    document.getElementById('profSaved').innerText = formatCur(stats.totalSaved);
+    document.getElementById('profBalance').innerText = formatCur(stats.balance);
+
+    // Fetch and populate user activities
+    try {
+      const res = await fetch('/api/user-activities');
+      if (res.ok) {
+        const activities = await res.json();
+        const tbody = document.getElementById('activity-log');
+        if (activities.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 20px; color: var(--gray);">No activity logged yet.</td></tr>';
+        } else {
+          tbody.innerHTML = activities.map(a => `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <td style="padding: 14px 12px; font-weight: 600; color: var(--orange2); font-size: 14px;">${a.action_type}</td>
+              <td style="padding: 14px 12px; font-size: 14px;">${a.description}</td>
+              <td style="padding: 14px 12px; font-size: 12px; color: var(--gray);">${new Date(a.timestamp + 'Z').toLocaleString()}</td>
+            </tr>
+          `).join('');
+        }
+      }
+    } catch(e) {
+      console.error('Failed to load activities', e);
+    }
+  });
+</script>
+</body>
+</html>

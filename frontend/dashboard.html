@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Dashboard - Flux</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #08080f; --bg2: #0e0e1a; --card: #12121e; --card2: #181828;
+      --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+      --white: #ffffff; --gray: #8888aa;
+      --orange: #e8491d; --orange2: #ff5722;
+      --purple: #7c5cbf; --blue: #2563eb; --green2: #34d399;
+      --glow-orange: rgba(232,73,29,0.18);
+      --glow-purple: rgba(124,92,191,0.18);
+    }
+    body { background:var(--bg); color:var(--white); font-family:'Inter', sans-serif; overflow-x:hidden; min-height:100vh; }
+    
+    /* Navbar styling identical to index.html for smoothUX */
+    .navbar {
+      position:fixed; top:18px; left:50%; transform:translateX(-50%); width:calc(100% - 40px); max-width:1280px;
+      background:rgba(12,12,22,0.82); backdrop-filter:blur(20px); border:1px solid var(--border2); border-radius:28px;
+      padding:0 26px; height:68px; display:flex; align-items:center; justify-content:space-between; z-index:1000;
+    }
+    .nav-brand { display:flex; align-items:center; gap:12px; text-decoration:none; color: white; }
+    .nav-logo { width:38px; height:38px; border-radius:14px; background:linear-gradient(135deg,var(--orange),#ff8c42); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:20px; box-shadow:0 0 18px var(--glow-orange); }
+    .nav-center { display:flex; gap:6px; }
+    .nav-link { color:var(--gray); font-size:14px; font-weight:500; text-decoration:none; padding:8px 16px; border-radius:40px; transition:all 0.2s; }
+    .nav-link:hover, .nav-link.active { color:var(--white); background:rgba(255,255,255,0.07); }
+    .nav-right { display:flex; align-items:center; gap:12px; }
+    .btn-logout { border:1px solid var(--border2); color:var(--gray); padding:7px 18px; border-radius:40px; font-size:13px; text-decoration:none; }
+
+    .main { max-width:1280px; margin:0 auto; padding:110px 24px 60px; display:flex; flex-direction:column; gap: 40px; }
+
+    .hero-col { display:flex; flex-direction:column; justify-content:center; position:relative; z-index:2; }
+    .title { font-size: 48px; font-weight:800; letter-spacing:-1.5px; margin-bottom:16px; line-height: 1.1; }
+    .title span { background:linear-gradient(135deg,var(--purple),#dfa4ff); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    
+    .score-card { background: var(--card2); border: 1px solid var(--border2); padding: 32px; border-radius: 32px; margin-top: 24px; display:flex; align-items:center; gap: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+    .score-circle { width: 100px; height: 100px; border-radius: 50%; border: 6px solid #fbbf24; display:flex; align-items:center; justify-content:center; font-size: 32px; font-weight: 800; background: rgba(251,191,36,0.1); box-shadow: 0 0 30px rgba(251,191,36,0.2); }
+    .score-info h3 { font-size: 24px; margin-bottom: 8px; }
+    .score-info p { color: var(--gray); font-size: 14px; line-height: 1.5; }
+
+    .actions { display:grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 32px; }
+    .btn { padding: 16px; border-radius: 20px; font-weight: 600; text-align:center; text-decoration:none; transition: 0.2s; border: 1px solid var(--border); display:flex; align-items:center; justify-content:center; gap:8px;}
+    .btn-save { background: linear-gradient(135deg, var(--green2), #10b981); color: #000; box-shadow: 0 10px 25px rgba(16,185,129,0.3); border: none; }
+    .btn-save:hover { transform: translateY(-3px); box-shadow: 0 15px 35px rgba(16,185,129,0.4); }
+    .btn-goal { background: var(--card); color: white; }
+    .btn-goal:hover { background: var(--card2); transform: translateY(-3px); border-color:var(--orange2); }
+    
+    .dashboard-row { display: grid; gap: 24px; }
+    .row-3 { grid-template-columns: repeat(3, 1fr); }
+    .row-2 { grid-template-columns: 1fr 1fr; }
+    
+    .dash-card { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 24px; transition: 0.2s; position:relative; overflow:hidden; }
+    .dash-card:hover { transform: translateY(-5px); border-color: rgba(255,255,255,0.2); }
+    .card-title { font-size: 14px; color: var(--gray); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; display:flex; align-items:center; gap:8px; margin-bottom: 16px; }
+    .card-value { font-size: 38px; font-weight: 900; letter-spacing: -1px; margin-bottom: 8px;}
+    
+    .trend-indicator { font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 20px; display:inline-block; }
+    .trend-up { background: rgba(16,185,129,0.15); color: var(--green2); }
+    
+    .insight-item { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 16px; border-radius: 16px; margin-bottom: 12px; display:flex; gap: 12px; }
+    .goal-list-item { background: var(--card2); padding: 16px; border-radius: 16px; border: 1px solid var(--border); margin-bottom:12px;}
+
+
+    /* 3D Canvas container */
+    .canvas-container { border-radius: 40px; overflow: hidden; position: relative; height: 500px; background: radial-gradient(circle at center, #1a1a2e 0%, #08080f 70%); border: 1px solid var(--border); box-shadow: 0 0 50px rgba(124,92,191,0.15); display: flex; align-items:center; justify-content:center; }
+    #three-canvas { width: 100%; height: 100%; display:block; }
+    .orb-label { position: absolute; bottom: 30px; text-align:center; width: 100%; pointer-events: none; }
+    .orb-label p { font-size: 14px; color: var(--green2); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:0.6;} 50%{opacity:1;} }
+
+    @media(max-width:1000px) {
+      .row-3 { grid-template-columns: 1fr 1fr; }
+      .canvas-container { height: 400px; }
+      .nav-center { display: none; } /* Hide center nav on small tablet */
+    }
+    @media(max-width:768px) {
+      .main { padding: 100px 16px 40px; }
+      .row-3, .row-2 { grid-template-columns: 1fr; }
+      .card-value { font-size: 32px; }
+      .title { font-size: 36px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="nav-brand">
+    <div class="nav-logo">⚡</div>
+    <div style="font-weight:700; font-size:20px;">Flux</div>
+  </a>
+  <div class="nav-center">
+    <a href="dashboard.html" class="nav-link active">Dashboard</a>
+    <a href="flux-card.html" class="nav-link">Flux Card</a>
+    <a href="analytics.html" class="nav-link">Analytics</a>
+    <a href="goals.html" class="nav-link">Goals</a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-user"></div>
+    <a href="logout.html" class="btn-logout">Log out</a>
+  </div>
+</nav>
+
+<div class="main">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom: 24px;">
+     <div style="display:flex; align-items:center; gap:8px; background:rgba(37,99,235,0.1); border:1px solid rgba(37,99,235,0.3); padding:8px 16px; border-radius:20px; font-size:12px; font-weight:600; color:var(--blue);">
+       <div style="width:8px; height:8px; background:var(--blue); border-radius:50%; box-shadow:0 0 8px var(--blue); animation:pulse 2s infinite;"></div>
+       E2E Encrypted Cloud Sync Active
+     </div>
+     <div style="display:flex; gap:16px;">
+       <a href="/api/export-report" target="_blank" style="background:var(--card); border:1px solid var(--purple); color:white; padding:10px 20px; border-radius:12px; text-decoration:none; font-size:13px; font-weight:700;">📄 Export Monthly PDF Report</a>
+       <a href="save-now.html" onclick="return requireAuth(event, 'save-now.html')" style="background:linear-gradient(135deg,var(--green2),#10b981); color:#000; padding:10px 20px; border-radius:12px; text-decoration:none; font-size:13px; font-weight:800; box-shadow:0 5px 15px rgba(16,185,129,0.3);">⚡ Trigger Smart Save</a>
+     </div>
+  </div>
+  <!-- TOP: Total Wealth, Score, Monthly Investment -->
+  <div class="dashboard-row row-3">
+    <div class="dash-card">
+      <div class="card-title">💰 Total Wealth</div>
+      <div class="card-value" id="d-wealth">₹0</div>
+      <div class="trend-indicator trend-up">↑ 12% vs last month</div>
+      <div style="margin-top: 16px; font-size: 13px; color: var(--green2); font-weight: 600; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
+        Projected Savings (30 days): <span id="d-projected">₹0</span>
+      </div>
+    </div>
+    <div class="dash-card" style="background: linear-gradient(135deg, #12121e, #1a1a2e); border-color: rgba(124,92,191,0.3); box-shadow: 0 10px 30px rgba(124,92,191,0.15);">
+      <div class="card-title" style="color: #dfa4ff;">⚡ FLUX Score</div>
+      <div style="display:flex; align-items:center; gap: 20px;">
+        <div class="card-value" id="d-score" style="color: transparent; background: linear-gradient(135deg, #dfa4ff, #9b79e0); -webkit-background-clip: text; margin:0;">0</div>
+        <div style="font-size:14px; color: var(--gray); line-height:1.4;">Out of 1000<br><span style="color:#dfa4ff; font-weight:600;" id="d-level">Level 1 Beginner</span></div>
+      </div>
+      <div style="margin-top: 16px; width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px;">
+        <div id="d-score-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #9b79e0, #dfa4ff); border-radius: 10px; transition: width 1s;"></div>
+      </div>
+      <div style="margin-top:12px; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px; display:inline-block; padding:4px 10px; background:rgba(255,255,255,0.05); border-radius:12px; color:var(--gray);" id="d-persona">
+        Analyzing Persona...
+      </div>
+    </div>
+    <div class="dash-card">
+      <div class="card-title">🌱 Monthly Investment</div>
+      <div class="card-value" id="d-invested">₹0</div>
+      <div style="font-size: 13px; color: var(--gray);">Auto-invested via Finvasia Shoonya</div>
+    </div>
+  </div>
+
+  <!-- MIDDLE: Goals, Growth Graph -->
+  <div class="dashboard-row row-2">
+    <div class="dash-card">
+      <div class="card-title" style="justify-content:space-between; width:100%;">
+        <span>🎯 Active Goals</span>
+        <a href="create-goal.html" style="font-size:13px; color:var(--orange2); text-decoration:none;">+ New Goal</a>
+      </div>
+      <div id="d-goals-list">
+        <div style="color:var(--gray); font-size:14px; padding:20px 0;">Loading goals...</div>
+      </div>
+    </div>
+    <div class="dash-card">
+      <div class="card-title">📈 Wealth Growth trajectory</div>
+      <div class="chart-area" style="height: 200px; display:flex; align-items:flex-end; gap: 8px; padding-top: 20px;">
+        <!-- Mock Bar Chart -->
+        <div style="flex:1; background:rgba(37,99,235,0.2); border-radius:6px 6px 0 0; height: 30%;"></div>
+        <div style="flex:1; background:rgba(37,99,235,0.3); border-radius:6px 6px 0 0; height: 45%;"></div>
+        <div style="flex:1; background:rgba(37,99,235,0.4); border-radius:6px 6px 0 0; height: 65%;"></div>
+        <div style="flex:1; background:rgba(124,92,191,0.5); border-radius:6px 6px 0 0; height: 80%;"></div>
+        <div style="flex:1; background:linear-gradient(0deg, #9b79e0, #dfa4ff); border-radius:6px 6px 0 0; height: 100%; box-shadow: 0 0 15px rgba(223,164,255,0.4);"></div>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-top:12px; font-size:12px; color:var(--gray);">
+        <span>Dec</span><span>Jan</span><span>Feb</span><span>Mar</span><span style="color:var(--white); font-weight:600;">Apr</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM: Insights, AI Suggestions -->
+  <div class="dashboard-row row-2">
+    <div class="dash-card">
+      <div class="card-title">⚠️ Behavioral Insights</div>
+      <div id="d-insights-list">
+        <div class="insight-item">
+          <div style="font-size:20px;">🤖</div>
+          <div>
+            <div style="font-weight:600; font-size:14px; margin-bottom:4px;">Scanning behavior...</div>
+            <div style="font-size:13px; color:var(--gray);">Analyzing recent expenses.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <style>
+      @keyframes goldPulse {
+        0% { box-shadow: 0 0 10px rgba(52,211,153,0.2); border-color: rgba(52,211,153,0.3); }
+        50% { box-shadow: 0 0 25px rgba(52,211,153,0.6); border-color: rgba(52,211,153,0.8); }
+        100% { box-shadow: 0 0 10px rgba(52,211,153,0.2); border-color: rgba(52,211,153,0.3); }
+      }
+    </style>
+    <div class="dash-card" style="border-width: 2px; animation: goldPulse 2.5s infinite; background: linear-gradient(135deg, rgba(52,211,153,0.05), rgba(0,0,0,0.8));">
+      <div class="card-title" style="color: var(--green2); font-size: 16px; font-weight: 800; text-shadow: 0 0 10px rgba(52,211,153,0.3);">
+        <span style="font-size: 20px;">💡</span> AI Wealth Nudges & Triggers
+      </div>
+      <div class="insight-item" style="border-color:rgba(52,211,153,0.2); background:rgba(52,211,153,0.05);">
+        <div style="font-size:24px;">⚡</div>
+        <div>
+          <div style="font-weight:700; color:var(--green2); font-size:15px; margin-bottom:6px;">Smart Save Opportunity Detected</div>
+          <div style="font-size:13px; color:rgba(255,255,255,0.8); line-height:1.5;">You spent 15% less on dining this week. Let Flux route the surplus ₹1,200 to your Equity Portfolio.</div>
+          
+          <div style="margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
+            <div style="font-size: 11px; text-transform: uppercase; color: var(--gray); font-weight: 700; margin-bottom: 6px; display:flex; justify-content:space-between; align-items:center;">
+              <span>🤖 AI Reasoning (Explainable AI)</span>
+            </div>
+            <div style="font-size: 12px; color: #a1a1aa; line-height: 1.4;">
+              <b>Pattern:</b> Weekend overspending detected previously, but corrected this week.<br>
+              <b>Action:</b> Locking in the delta immediately limits future spending slip-ups.
+            </div>
+          </div>
+          
+          <a href="save-now.html" style="display:inline-block; background:var(--green2); padding:8px 16px; border-radius:8px; color:#000; font-weight:700; font-size:13px; margin-top:12px; text-decoration:none;">Auto-Invest ₹1,200 Now</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- EXTRA: Portfolio, Simulator -->
+  <div class="dashboard-row row-2">
+    <div class="dash-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+        <div>
+          <div class="card-title" style="margin-bottom:4px;">💼 Virtual Portfolio</div>
+          <div style="color:var(--gray); font-size:13px;">Manage Connected Brokers</div>
+        </div>
+        <a href="portfolio.html" style="font-size:20px; color:white; text-decoration:none;">→</a>
+      </div>
+      <div style="display:flex; gap: 8px;">
+        <button style="flex:1; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:12px; color:white; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;" onclick="alert('Shoonya Integration Enabled')">
+          <span style="color:#0ea5e9;">✦</span> Shoonya
+        </button>
+        <button style="flex:1; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:12px; color:white; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;" onclick="alert('Razorpay Gateway Connected')">
+          <span style="color:#3b82f6;">▤</span> Razorpay
+        </button>
+      </div>
+    </div>
+    <a href="simulator.html" class="dash-card" style="text-decoration:none; display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg,rgba(232,73,29,0.1),transparent);">
+      <div>
+        <div class="card-title" style="color:var(--orange2);">🔮 Future Wealth Simulator</div>
+        <div style="color:var(--gray); font-size:13px;">Predict 1-year & 5-year growth</div>
+      </div>
+      <div style="font-size:24px; color:var(--orange2);">→</div>
+    </a>
+  </div>
+</div>
+
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const canvas = document.getElementById('three-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+    camera.position.z = 12;
+
+    // EXTRAORDINARY AI WEALTH CORE VISUALS
+    const coreGeometry = new THREE.TorusKnotGeometry(1.5, 0.4, 150, 20);
+    const coreMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0x9b79e0, emissive: 0x3b82f6, emissiveIntensity: 0.8,
+      metalness: 0.8, roughness: 0.1, clearcoat: 1.0, wireframe: true 
+    });
+    const core = new THREE.Mesh(coreGeometry, coreMaterial);
+    scene.add(core);
+
+    const innerSphere = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(1.2, 1),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xdfa4ff, emissiveIntensity: 1 })
+    );
+    scene.add(innerSphere);
+
+    // Orbiting 'wealth nodes' (glassic cubes)
+    const nodeGroup = new THREE.Group();
+    const cubeGeo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+    const cubeMat = new THREE.MeshPhysicalMaterial({
+        color: 0x34d399, transmission: 0.9, opacity: 1, metalness: 0, roughness: 0, emissive: 0x10b981, emissiveIntensity: 0.5
+    });
+    for(let i=0; i<12; i++) {
+        const cube = new THREE.Mesh(cubeGeo, cubeMat);
+        const angle = (i / 12) * Math.PI * 2;
+        cube.position.x = Math.cos(angle) * 3.5;
+        cube.position.y = Math.sin(angle) * 3.5;
+        nodeGroup.add(cube);
+    }
+    scene.add(nodeGroup);
+
+    // Starfield debris
+    const particleGeo = new THREE.BufferGeometry();
+    const particleCount = 800;
+    const posArray = new Float32Array(particleCount * 3);
+    for(let i=0; i<particleCount*3; i++) posArray[i] = (Math.random() - 0.5) * 20;
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+    const particleMat = new THREE.PointsMaterial({ size: 0.05, color: 0x10b981, transparent: true, opacity: 0.6 });
+    const particles = new THREE.Points(particleGeo, particleMat);
+    scene.add(particles);
+
+    const ambientLight = new THREE.AmbientLight(0x404040, 2);
+    scene.add(ambientLight);
+    const ptLight1 = new THREE.PointLight(0xffffff, 2); ptLight1.position.set(5,5,5); scene.add(ptLight1);
+    const ptLight2 = new THREE.PointLight(0xdfa4ff, 3); ptLight2.position.set(-5,-5,-5); scene.add(ptLight2);
+
+    let mouseX = 0; let mouseY = 0;
+    document.addEventListener('mousemove', (event) => {
+      mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+      mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+    });
+
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const elapsedTime = clock.getElapsedTime();
+
+      core.rotation.y += 0.005; core.rotation.x += 0.003;
+      innerSphere.rotation.y -= 0.01;
+      
+      const bounce = Math.sin(elapsedTime * 2);
+      innerSphere.scale.set(1 + bounce*0.05, 1 + bounce*0.05, 1 + bounce*0.05);
+
+      nodeGroup.rotation.z -= 0.005;
+      nodeGroup.rotation.x = Math.sin(elapsedTime) * 0.5;
+      
+      nodeGroup.children.forEach((c, i) => {
+         c.rotation.x += 0.02; c.rotation.y += 0.02;
+      });
+
+      particles.rotation.y += 0.001;
+      particles.rotation.x += (mouseY * 0.5 - particles.rotation.x) * 0.05;
+      particles.rotation.y += (mouseX * 0.5 - particles.rotation.y) * 0.05;
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      const container = document.querySelector('.canvas-container');
+      const cw = container.clientWidth;
+      const ch = container.clientHeight;
+      camera.aspect = cw / ch;
+      camera.updateProjectionMatrix();
+      renderer.setSize(cw, ch);
+    });
+  });
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
+<script src="app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  await initAppPromise;
+  const dashboard = await getDashboard();
+  
+  // Extract data
+  let score = dashboard.score || 0;
+  let wealth = dashboard.totalWealth || 0;
+  let investments = dashboard.investments || 0;
+  let persona = dashboard.persona || "Balanced Saver";
+  let projected = dashboard.projected_savings || 12500;
+  
+  document.getElementById('d-wealth').innerText = formatCur(wealth);
+  document.getElementById('d-invested').innerText = formatCur(investments);
+  if (document.getElementById('d-projected')) document.getElementById('d-projected').innerText = formatCur(projected);
+  if (document.getElementById('d-persona')) document.getElementById('d-persona').innerText = `Financial Type: ${persona}`;
+  
+  // Score & Level Logic (0 to 1000 now)
+  document.getElementById('d-score').innerText = score;
+  const gamification = await getGamification();
+  let level = "Beginner";
+  if(score > 300) level = "Pro";
+  if(score > 750) level = "Wealth Master";
+  document.getElementById('d-level').innerText = `Level ${gamification.level || 1} ${level}`;
+  
+  let scorePct = (score / 1000) * 100;
+  document.getElementById('d-score-bar').style.width = `${scorePct}%`;
+  
+  // Populate Goals
+  const goalsList = document.getElementById('d-goals-list');
+  const allGoals = await getGoals();
+  const activeGoals = allGoals ? allGoals.filter(g => (g.currentAmount / g.targetAmount) < 1) : [];
+  
+  if(activeGoals.length > 0) {
+    goalsList.innerHTML = activeGoals.slice(0, 3).map(g => {
+      const pct = Math.min(100, Math.round((g.currentAmount / g.targetAmount) * 100));
+      return `<div class="goal-list-item">
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <div style="font-weight:600;">${g.icon} ${g.title}</div>
+          <div style="font-size:13px; color:var(--gray);">${pct}% completed | On track ✅</div>
+        </div>
+        <div style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:10px;">
+          <div style="width:${pct}%; height:100%; background:var(--orange); border-radius:10px;"></div>
+        </div>
+      </div>`;
+    }).join('');
+  } else {
+    goalsList.innerHTML = `<div style="color:var(--gray); font-size:14px; padding:20px 0;">No active goals. Add one to track progress.</div>`;
+  }
+  
+  // Populate Insights
+  const insightsList = document.getElementById('d-insights-list');
+  if(dashboard.insights && dashboard.insights.length > 0) {
+    insightsList.innerHTML = dashboard.insights.map(i => {
+      let icon = "🤖";
+      if(i.toLowerCase().includes('overspend')) icon = "⚠️";
+      if(i.toLowerCase().includes('discipline')) icon = "🏆";
+      
+      return `<div class="insight-item">
+        <div style="font-size:24px;">${icon}</div>
+        <div>
+          <div style="font-weight:600; font-size:14px; margin-bottom:4px;">Behavior Analyzer</div>
+          <div style="font-size:13px; color:var(--gray); line-height:1.4;">${i}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Initialize Vanilla Tilt
+  if (typeof VanillaTilt !== "undefined") {
+    VanillaTilt.init(document.querySelectorAll(".dash-card"), {
+        max: 5,
+        speed: 400,
+        glare: true,
+        "max-glare": 0.05,
+        scale: 1.02
+    });
+  }
+});
+</script>
+</body>
+</html>

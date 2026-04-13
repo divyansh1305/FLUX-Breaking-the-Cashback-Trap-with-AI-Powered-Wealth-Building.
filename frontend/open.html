@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>FLUX — Turn cash flow into wealth flow</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0a0a0a;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* STAGES */
+    .stage {
+      position: fixed;
+      inset: 0;
+      transition: opacity 0.6s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+      will-change: opacity;
+    }
+    .hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    /* ─── BRAND STAGE (with 3s loading) ───────────────────────── */
+    #brandStage {
+      background: radial-gradient(circle at 30% 20%, #0c0f18, #030405);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 60;
+    }
+    .brand-container {
+      text-align: center;
+      animation: fadeUp 0.9s ease-out;
+    }
+    @keyframes fadeUp {
+      0% { opacity: 0; transform: translateY(25px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .flux-name {
+      font-size: clamp(3.8rem, 12vw, 7rem);
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #FFFFFF 20%, #3ef0ff 70%, #1de9a0 100%);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      text-shadow: 0 0 25px rgba(62,240,255,0.3);
+      margin-bottom: 0.2em;
+    }
+    .tagline-brand {
+      font-size: clamp(0.85rem, 3.5vw, 1.2rem);
+      font-weight: 400;
+      color: rgba(255,255,255,0.75);
+      border-top: 1px solid rgba(62,240,255,0.4);
+      display: inline-block;
+      padding-top: 0.7rem;
+      letter-spacing: 0.02em;
+    }
+    .loading-wrapper {
+      margin-top: 2.5rem;
+      width: 180px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .loading-track {
+      height: 2px;
+      background: rgba(255,255,255,0.12);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .loading-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #3ef0ff, #1de9a0);
+      border-radius: 4px;
+      transition: width 0.08s linear;
+    }
+    .loading-text {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: rgba(62,240,255,0.7);
+      margin-top: 8px;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    /* ─── QUESTION + ICONS STAGE ─────────────────────────── */
+    #questionStage {
+      background: #0a0a0a;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .question-core {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+      will-change: transform, opacity, filter;
+    }
+    /* collapse animation — dramatic shrink + blur */
+    .question-core.collapse {
+      transform: scale(0.15) translateY(40px);
+      opacity: 0;
+      filter: blur(28px);
+      pointer-events: none;
+    }
+    #questionText {
+      font-size: clamp(18px, 2.8vw, 30px);
+      font-weight: 400;
+      color: #fff;
+      letter-spacing: -0.01em;
+      text-align: center;
+      z-index: 20;
+      position: relative;
+    }
+    .word {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      margin-right: 0.3em;
+    }
+    .word:last-child { margin-right: 0; }
+    .word.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    /* floating icons */
+    .ic {
+      position: absolute;
+      width: 68px;
+      height: 68px;
+      background: rgba(255,255,255,0.06);
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(62,240,255,0.2);
+      border-radius: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      will-change: transform, opacity, left, top;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.3);
+      transition: opacity 0.5s ease, left 0.9s cubic-bezier(0.16,1,0.3,1), top 0.9s cubic-bezier(0.16,1,0.3,1);
+      pointer-events: none;
+    }
+    .ic svg {
+      width: 30px;
+      height: 30px;
+      stroke: #fff;
+      fill: none;
+      stroke-width: 1.4;
+      opacity: 0.85;
+      filter: drop-shadow(0 0 3px rgba(62,240,255,0.3));
+    }
+    @media (max-width: 600px) {
+      .ic { width: 54px; height: 54px; border-radius: 18px; }
+      .ic svg { width: 26px; height: 26px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- BRAND STAGE (3s loading) -->
+<div id="brandStage" class="stage">
+  <div class="brand-container">
+    <div class="flux-name">FLUX</div>
+    <div class="tagline-brand">Turn cash flow into wealth flow.</div>
+    <div class="loading-wrapper">
+      <div class="loading-track">
+        <div class="loading-fill" id="loadingFill"></div>
+      </div>
+      <div class="loading-text">CALIBRATING WEALTH</div>
+    </div>
+  </div>
+</div>
+
+<!-- QUESTION + ICONS STAGE (interactive reveal) -->
+<div id="questionStage" class="stage hidden">
+  <div class="question-core" id="questionCore">
+    <div id="questionText"></div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    // DOM elements
+    const brandStage = document.getElementById('brandStage');
+    const questionStage = document.getElementById('questionStage');
+    const questionCore = document.getElementById('questionCore');
+    const questionContainer = document.getElementById('questionText');
+    const loadingFill = document.getElementById('loadingFill');
+    
+    // icon definitions — wealth & flow metaphors
+    const iconDefs = [
+      { svg: `<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>` },
+      { svg: `<rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>` },
+      { svg: `<path d="M17.8 19.2L16 11l3.5-3.5a2.12 2.12 0 0 0-3-3L13 8 4.8 6.2a.5.5 0 0 0-.5.8l4 4-2 2 1.5 1.5 2-2 4 4a.5.5 0 0 0 .8-.5z"/>` },
+      { svg: `<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>` },
+      { svg: `<circle cx="12" cy="5" r="2"/><path d="M6 20c0-4 2.7-7 6-7s6 3 6 7M12 10v3"/>` }
+    ];
+    
+    let iconElements = [];
+    let sequenceActive = true;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    
+    // create icon divs inside questionCore
+    function createIcons() {
+      iconDefs.forEach(def => {
+        const ic = document.createElement('div');
+        ic.className = 'ic';
+        ic.innerHTML = `<svg viewBox="0 0 24 24">${def.svg}</svg>`;
+        questionCore.appendChild(ic);
+        iconElements.push(ic);
+      });
+    }
+    
+    // position icons: rest positions (beautiful spread) / offscreen initial
+    function positionIcons(useOffscreen = false) {
+      const w = window.innerWidth, h = window.innerHeight;
+      const iconW = 68, iconH = 68;
+      const cx = w/2 - iconW/2, cy = h/2 - iconH/2;
+      const restPoints = [
+        { rx: -0.28, ry: -0.18 }, { rx: 0.27, ry: -0.20 },
+        { rx: -0.32, ry: 0.20 }, { rx: 0.30, ry: 0.22 }, { rx: 0.0, ry: 0.30 }
+      ];
+      const offPoints = [
+        { ox: -0.7, oy: -0.8 }, { ox: 0.75, oy: -0.85 },
+        { ox: -0.8, oy: 0.85 }, { ox: 0.8, oy: 0.9 }, { ox: 0.0, oy: 1.1 }
+      ];
+      iconElements.forEach((icon, idx) => {
+        let leftPx, topPx;
+        if (useOffscreen) {
+          const off = offPoints[idx % offPoints.length];
+          leftPx = cx + off.ox * w;
+          topPx = cy + off.oy * h;
+        } else {
+          const rest = restPoints[idx % restPoints.length];
+          leftPx = cx + rest.rx * w;
+          topPx = cy + rest.ry * h;
+        }
+        icon.style.left = leftPx + 'px';
+        icon.style.top = topPx + 'px';
+      });
+    }
+    
+    // 1) LOADING SEQUENCE: 3 seconds with progress bar
+    async function runLoading() {
+      const duration = 3000;
+      const startTime = performance.now();
+      return new Promise((resolve) => {
+        function updateFill(now) {
+          const elapsed = now - startTime;
+          let percent = Math.min(100, (elapsed / duration) * 100);
+          loadingFill.style.width = percent + '%';
+          if (elapsed < duration) {
+            requestAnimationFrame(updateFill);
+          } else {
+            loadingFill.style.width = '100%';
+            resolve();
+          }
+        }
+        requestAnimationFrame(updateFill);
+      });
+    }
+    
+    // 2) WORD-BY-WORD ANIMATION (What does money mean to you?)
+    async function animateWords() {
+      const words = ['What', 'does', 'money', 'mean', 'to', 'you?'];
+      questionContainer.innerHTML = words.map((w, i) => `<span class="word" id="word${i}">${w}</span>`).join(' ');
+      for (let i = 0; i < words.length; i++) {
+        if (!sequenceActive) return;
+        await wait(i === 0 ? 0 : 190);
+        const span = document.getElementById('word'+i);
+        if (span) span.classList.add('visible');
+      }
+    }
+    
+    // 3) ICONS FLY IN one by one (smooth entrance)
+    async function flyInIcons() {
+      for (let i = 0; i < iconElements.length; i++) {
+        if (!sequenceActive) return;
+        await wait(220);
+        const icon = iconElements[i];
+        icon.style.transition = 'opacity 0.5s ease, left 0.9s cubic-bezier(0.16,1,0.3,1), top 0.9s cubic-bezier(0.16,1,0.3,1)';
+        icon.style.opacity = '1';
+        positionIcons(false);
+      }
+      await wait(600);
+    }
+    
+    // 4) COLLAPSE the question stage → then DIRECT REDIRECT to index.html
+    async function collapseAndRedirect() {
+      // add collapse class for dramatic shrink + blur
+      questionCore.classList.add('collapse');
+      // wait for collapse animation to complete (700ms matches CSS transition)
+      await wait(700);
+      // ✅ DIRECT REDIRECT — no overlay, no button, no confirmation
+      window.location.href = 'index.html';
+    }
+    
+    // resize handler: keep icons properly positioned during active stage
+    function handleResize() {
+      if (questionStage && !questionStage.classList.contains('hidden') && iconElements.length && !questionCore.classList.contains('collapse')) {
+        if (iconElements[0] && iconElements[0].style.opacity === '1') {
+          positionIcons(false);
+        } else {
+          positionIcons(true);
+        }
+      }
+    }
+    
+    // MAIN ORCHESTRATION — brand → question → collapse → redirect
+    async function startExperience() {
+      createIcons();
+      positionIcons(true);
+      
+      // 1) loading for 3 seconds (brand stage)
+      await runLoading();
+      
+      // 2) fade out brand stage
+      brandStage.style.opacity = '0';
+      await wait(400);
+      brandStage.style.visibility = 'hidden';
+      brandStage.style.display = 'none';
+      
+      // 3) reveal question stage
+      questionStage.classList.remove('hidden');
+      await wait(100);
+      
+      // 4) word animation (What does money mean to you?)
+      await animateWords();
+      
+      // 5) icons fly in from edges
+      await flyInIcons();
+      
+      // 6) short pause for user absorption, then collapse and redirect
+      await wait(1500);
+      
+      // 7) collapse question stage + immediate redirect to index.html
+      await collapseAndRedirect();
+    }
+    
+    window.addEventListener('resize', () => { setTimeout(handleResize, 80); });
+    startExperience().catch(err => {
+      console.warn(err);
+      // fallback: ensure redirect even on unexpected error
+      window.location.href = 'index.html';
+    });
+  })();
+</script>
+</body>
+</html>
+</html>

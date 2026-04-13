@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Virtual Portfolio - Flux</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #08080f; --card: #12121e; --border: rgba(255,255,255,0.07);
+      --white: #ffffff; --gray: #8888aa; --orange: #e8491d; --green2: #34d399;
+    }
+    body { background: var(--bg); color: var(--white); font-family: 'Inter', sans-serif; padding: 40px; }
+    h1 { margin-bottom: 8px; font-weight:800; font-size:32px; }
+    .sub { color: var(--gray); margin-bottom: 40px; }
+    .portfolio-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 40px; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); padding: 24px; border-radius: 20px; }
+    .allocation { display: flex; gap: 16px; margin-bottom: 40px; }
+    .alloc-item { flex:1; background:var(--card); padding:20px; border-radius:16px; border:1px solid var(--border); text-align:center;}
+    .alloc-title { font-size:14px; font-weight:600; margin-bottom:8px;}
+    .alloc-val { font-size:24px; font-weight:800; }
+  </style>
+</head>
+<body>
+  <a href="dashboard.html" style="color:var(--gray); text-decoration:none; display:inline-block; margin-bottom:20px;">← Back to Dashboard</a>
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h1>Virtual Portfolio</h1>
+      <div id="mkt-status" style="font-size:12px; font-weight:600; padding:6px 12px; border-radius:20px; background:rgba(255,255,255,0.1); color:var(--gray);">Fetching Market Data...</div>
+  </div>
+  <div class="sub">FLUX connects users to markets via Shoonya powered by Finvasia.</div>
+  
+  <div class="portfolio-grid">
+    <div class="stat-card">
+      <div style="color:var(--gray); font-size:14px;">Total Invested</div>
+      <div style="font-size:32px; font-weight:800; margin-top:8px;" id="p-invested">₹0</div>
+    </div>
+    <div class="stat-card">
+      <div style="color:var(--gray); font-size:14px;">Current Value</div>
+      <div style="font-size:32px; font-weight:800; margin-top:8px;" id="p-current">₹0</div>
+    </div>
+    <div class="stat-card">
+      <div style="color:var(--gray); font-size:14px;">Returns (Unrealized)</div>
+      <div style="font-size:32px; font-weight:800; margin-top:8px; color:var(--green2);" id="p-returns">+0%</div>
+    </div>
+  </div>
+
+  <h2 style="margin-bottom:16px;">Smart Asset Allocation</h2>
+  <div class="allocation">
+    <div class="alloc-item">
+      <div class="alloc-title" style="color:#dfa4ff;">Equity (Growth)</div>
+      <div class="alloc-val">60%</div>
+    </div>
+    <div class="alloc-item">
+      <div class="alloc-title" style="color:#fbbf24;">Safe (Gold/Debt)</div>
+      <div class="alloc-val">30%</div>
+    </div>
+    <div class="alloc-item">
+      <div class="alloc-title" style="color:#34d399;">Liquid (Cash)</div>
+      <div class="alloc-val">10%</div>
+    </div>
+  </div>
+  
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await initAppPromise;
+      const dashboard = await getDashboard();
+      const invested = dashboard.investments || 0;
+      
+      let current = invested;
+      let changeText = "+0%";
+      let changeColor = "var(--gray)";
+      
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/api/market-data`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        const market = await res.json();
+        
+        // Apply real market performance to their virtual portfolio
+        if (market.change_pct !== undefined) {
+             current = invested * (1 + (market.change_pct / 100));
+             const profit = current - invested;
+             const sign = profit >= 0 ? '+' : '';
+             changeColor = profit >= 0 ? "var(--green2)" : "#ef4444";
+             changeText = `${sign}${formatCur(profit)} (${market.change_pct}%)`;
+             
+             document.getElementById('mkt-status').innerText = market.status === "live" ? "🟢 Live NIFTY 50 Feed (Shoonya)" : "🟡 Simulated Market Feed";
+        }
+      } catch(e) { }
+
+      document.getElementById('p-invested').innerText = formatCur(invested);
+      document.getElementById('p-current').innerText = formatCur(current);
+      document.getElementById('p-returns').innerText = changeText;
+      document.getElementById('p-returns').style.color = changeColor;
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Flux Card - Transparent Wealth</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #08080f; --bg2: #0e0e1a; --card: #12121e; --card2: #181828;
+      --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+      --white: #ffffff; --gray: #8888aa;
+      --orange: #e8491d; --orange2: #ff5722;
+      --purple: #7c5cbf; --blue: #2563eb; --green: #10b981;
+    }
+    body { background:var(--bg); color:var(--white); font-family:'Inter', sans-serif; min-height:100vh; display:flex; flex-direction:column; align-items:center; }
+
+    /* Navbar */
+    .navbar {
+      position:fixed; top:18px; left:50%; transform:translateX(-50%); width:calc(100% - 40px); max-width:1280px;
+      background:rgba(12,12,22,0.82); backdrop-filter:blur(20px); border:1px solid var(--border2); border-radius:28px;
+      padding:0 26px; height:68px; display:flex; align-items:center; justify-content:space-between; z-index:1000;
+    }
+    .nav-brand { display:flex; align-items:center; gap:12px; text-decoration:none; color:white; }
+    .nav-logo { width:38px; height:38px; border-radius:14px; background:linear-gradient(135deg,var(--orange),#ff8c42); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:20px; box-shadow:0 0 18px rgba(232,73,29,0.18); }
+    .nav-links { display:flex; gap:16px; }
+    .nav-link { color:var(--gray); text-decoration:none; font-size:14px; font-weight:500; transition:0.2s; }
+    .nav-link:hover, .nav-link.active { color:var(--white); }
+
+    .container { margin-top: 120px; width: 100%; max-width: 1000px; padding: 0 20px; text-align: center; }
+    .title { font-size: 42px; font-weight: 800; margin-bottom: 16px; background:linear-gradient(135deg, #e8491d, #ff8c42); -webkit-background-clip:text; color:transparent; }
+    .subtitle { color: var(--gray); font-size: 16px; max-width: 600px; margin: 0 auto 40px; line-height: 1.6; }
+
+    /* Virtual Card */
+    .flux-card {
+      width: 440px; height: 280px; margin: 0 auto;
+      background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 24px; box-shadow: 0 30px 60px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05);
+      position: relative; overflow: hidden; backdrop-filter: blur(10px);
+      padding: 30px; display: flex; flex-direction: column; justify-content: space-between;
+      text-align: left;
+    }
+    .card-glow { position:absolute; top:-50px; right:-50px; width:200px; height:200px; background:var(--orange); filter:blur(100px); opacity:0.3; border-radius:50%; pointer-events:none; }
+    .card-glow-2 { position:absolute; bottom:-50px; left:-50px; width:200px; height:200px; background:var(--purple); filter:blur(100px); opacity:0.2; border-radius:50%; pointer-events:none; }
+    
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; z-index: 2; position: relative; }
+    .card-logo { font-size: 24px; font-weight: 800; display:flex; align-items:center; gap:8px; }
+    .card-chip { width: 45px; height: 32px; background: linear-gradient(135deg, #e0e0e0, #999); border-radius: 6px; opacity: 0.8; }
+    
+    .card-body { z-index: 2; position: relative; margin-top: auto; }
+    .card-label { font-size: 12px; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px; }
+    .card-wealth { font-size: 42px; font-weight: 900; letter-spacing: 1px; }
+    .card-footer { display: flex; justify-content: space-between; margin-top: 24px; z-index: 2; position: relative; }
+    .card-name { font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; }
+    .card-type { font-size: 14px; font-weight: 600; color: var(--orange); }
+
+    /* Breakdown Section */
+    .breakdown-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 60px;
+    }
+    .panel {
+      background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 30px; text-align: left;
+    }
+    .panel h3 { font-size: 20px; font-weight: 700; margin-bottom: 16px; color: var(--white); }
+    .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--border); }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-lbl { color: var(--gray); font-size: 14px; }
+    .stat-val { font-size: 18px; font-weight: 700; }
+    .val-pos { color: #34d399; }
+    .val-neg { color: #f87171; }
+
+    @media(max-width: 600px) {
+      .breakdown-grid { grid-template-columns: 1fr; }
+      .flux-card { width: 100%; height: 240px; padding: 20px; }
+      .card-wealth { font-size: 32px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <a href="index.html" class="nav-brand">
+      <div class="nav-logo">⚡</div>
+      <div style="font-weight:700; font-size:20px;">Flux</div>
+    </a>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">Dashboard</a>
+      <a href="flux-card.html" class="nav-link active">Flux Card</a>
+      <a href="profile.html" class="nav-link">Profile</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h1 class="title">Your Transparent Wealth</h1>
+    <p class="subtitle">See exactly how your everyday expenses are being automatically converted into lifelong wealth. No hidden fees, no useless cashback. Only growth.</p>
+
+    <div class="flux-card">
+      <div class="card-glow"></div>
+      <div class="card-glow-2"></div>
+      
+      <div class="card-header">
+        <div class="card-logo">⚡ FLUX</div>
+        <div class="card-chip"></div>
+      </div>
+      
+      <div class="card-body">
+        <div class="card-label">Total Wealth Generated</div>
+        <div class="card-wealth" id="fc-wealth">₹0</div>
+      </div>
+      
+      <div class="card-footer">
+        <div class="card-name" id="fc-name">FLUX USER</div>
+        <div class="card-type">WEALTH ENGINE</div>
+      </div>
+    </div>
+
+    <div class="breakdown-grid">
+      <div class="panel">
+        <h3>Cashback vs. Flux</h3>
+        <p style="color:var(--gray); font-size:13px; margin-bottom: 20px;">A comparison of what you would have earned on a standard 2% cashback card vs the Flux 5% Auto-Invest Engine.</p>
+        
+        <div class="stat-row">
+          <span class="stat-lbl">Total Expenses Logged</span>
+          <span class="stat-val" id="fc-expenses">₹0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-lbl">Traditional Cashback (2%)</span>
+          <span class="stat-val" id="fc-cashback">₹0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-lbl" style="color:var(--orange);">Flux Investments (5%)</span>
+          <span class="stat-val val-pos" id="fc-investments">₹0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-lbl">Wealth Multiplier</span>
+          <span class="stat-val" id="fc-multiplier" style="color:var(--purple); font-size: 24px;">0x</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Investment Breakdown</h3>
+        <p style="color:var(--gray); font-size:13px; margin-bottom: 20px;">Where did your wealth come from? A transparent look at your auto-saving sources.</p>
+        
+        <div id="breakdown-list">
+          <!-- Dynamically populated -->
+          <div style="color:var(--gray); font-size:14px;">Loading breakdown...</div>
+        </div>
+        
+        <div class="stat-row" style="margin-top: 20px; background: rgba(255,255,255,0.05); padding: 16px; border-radius: 12px; border-bottom: none;">
+          <span class="stat-lbl" style="color:white; font-weight:600;">Net Surplus Balance</span>
+          <span class="stat-val" id="fc-balance">₹0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await initAppPromise;
+      if (appState.user && appState.user.name) {
+        document.getElementById('fc-name').innerText = appState.user.name;
+      }
+      
+      const stats = await getDashboard();
+      
+      document.getElementById('fc-wealth').innerText = formatCur(stats.totalSaved);
+      document.getElementById('fc-expenses').innerText = formatCur(stats.expenses);
+      
+      const cashbackEquiv = stats.expenses * 0.02;
+      document.getElementById('fc-cashback').innerText = formatCur(cashbackEquiv);
+      document.getElementById('fc-investments').innerText = formatCur(stats.investments);
+      
+      const mult = cashbackEquiv > 0 ? (stats.investments / cashbackEquiv).toFixed(1) : 0;
+      document.getElementById('fc-multiplier').innerText = `${mult}x`;
+      
+      document.getElementById('fc-balance').innerText = formatCur(stats.balance);
+      
+      // Fetch dynamic breakdown
+      try {
+        const bdRes = await fetch('/api/investments-breakdown');
+        if(bdRes.ok) {
+          const bd = await bdRes.json();
+          let html = '';
+          if(bd.length > 0) {
+            bd.forEach(b => {
+              let color = '#10b981';
+              if(b.category.includes('Gold')) color = '#f59e0b';
+              else if(b.category.includes('S&P 500')) color = '#3b82f6';
+              html += `
+              <div class="stat-row">
+                <span class="stat-lbl" style="display:flex;align-items:center;gap:8px;">
+                  <span style="display:inline-block;width:10px;height:10px;background:${color};border-radius:50%;"></span>
+                  ${b.category}
+                </span>
+                <span class="stat-val">${formatCur(b.amount)}</span>
+              </div>`;
+            });
+          } else {
+            html = '<div style="color:var(--gray); font-size:14px; margin-bottom: 16px;">No investments yet.</div>';
+          }
+          document.getElementById('breakdown-list').innerHTML = html;
+        }
+      } catch(e) {
+        console.error("Failed to load breakdown", e);
+      }
+    });
+  </script>
+</body>
+</html>
