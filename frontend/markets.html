@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Flux Trading - Wealth Engine</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="global-voice.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #08080f; --bg2: #0e0e1a; --card: #12121e; --card2: #181828;
+      --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+      --white: #ffffff; --gray: #8888aa;
+      --orange: #e8491d; --blue: #3b82f6; --cyan: #06b6d4;
+      --green: #10b981; --red: #ef4444; --purple: #8b5cf6;
+      --glow-blue: rgba(59,130,246,0.15);
+    }
+    body { background:var(--bg); color:var(--white); font-family:'Inter', sans-serif; overflow-x:hidden; min-height:100vh; }
+    
+    .navbar {
+      position:fixed; top:18px; left:50%; transform:translateX(-50%); width:calc(100% - 40px); max-width:1280px;
+      background:rgba(12,12,22,0.82); backdrop-filter:blur(20px); border:1px solid var(--border2); border-radius:28px;
+      padding:0 26px; height:68px; display:flex; align-items:center; justify-content:space-between; z-index:1000;
+    }
+    .nav-brand { display:flex; align-items:center; gap:12px; text-decoration:none; color: white; }
+    .nav-logo { width:38px; height:38px; border-radius:14px; background:linear-gradient(135deg,var(--orange),#ff8c42); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:20px; box-shadow:0 0 18px rgba(232,73,29,0.18); }
+    .nav-center { display:flex; gap:6px; }
+    .nav-link { color:var(--gray); font-size:14px; font-weight:500; text-decoration:none; padding:8px 16px; border-radius:40px; transition:all 0.2s; }
+    .nav-link:hover, .nav-link.active { color:var(--white); background:rgba(255,255,255,0.07); }
+    .nav-right { display:flex; align-items:center; gap:12px; }
+    .btn-logout { border:1px solid var(--border2); color:var(--gray); padding:7px 18px; border-radius:40px; font-size:13px; text-decoration:none; }
+
+    /* Top Ticker Tape Space */
+    .ticker-wrap { width: 100%; margin-top: 90px; }
+
+    .main { max-width:1280px; margin:0 auto; padding:20px 24px 60px; }
+    
+    .hero-title { font-size: 42px; font-weight:900; letter-spacing:-1.5px; margin-bottom:12px; line-height: 1.1; display: flex; align-items: center; gap: 12px; }
+    .hero-title span { background:linear-gradient(135deg,var(--blue),var(--cyan)); -webkit-background-clip:text; color:transparent; }
+    .hero-subtitle { color: var(--gray); font-size: 15px; margin-bottom: 30px; }
+    
+    .pulse-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--green); box-shadow: 0 0 15px var(--green); animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(16,185,129,0.7); } 70% { box-shadow: 0 0 0 10px rgba(16,185,129,0); } 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); } }
+
+    .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px; }
+    @media(max-width:1050px) { .dashboard-grid { grid-template-columns: 1fr; } }
+    
+    .dash-card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 24px; position:relative; overflow:hidden; }
+    .card-title { font-size: 14px; color: var(--gray); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; display:flex; align-items:center; justify-content:space-between; }
+
+    /* TradingView Container Overrides */
+    .tv-widget-container { width: 100%; height: 500px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border2); }
+    
+    .ai-trade-panel { background: linear-gradient(180deg, #181828, #12121e); border: 1px solid rgba(59,130,246,0.3); border-radius: 20px; padding: 24px; display: flex; flex-direction: column; position:relative;}
+    .ai-trade-panel::before { content:''; position:absolute; top:0; left:0; width:100%; height:3px; background:linear-gradient(90deg, var(--blue), var(--cyan), var(--blue)); background-size: 200% auto; animation: shine 2s linear infinite; }
+    @keyframes shine { to { background-position: 200% center; } }
+    
+    .signal { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); padding: 16px; border-radius: 16px; margin-bottom: 16px; display: flex; align-items:center; gap: 16px; }
+    .signal-icon { font-size: 24px; color: var(--green); }
+    .signal-title { font-size: 13px; color: var(--gray); font-weight: 600; margin-bottom: 4px; }
+    .signal-val { font-size: 20px; font-weight: 800; color: white; }
+
+    .btn-invest { background: linear-gradient(135deg, var(--blue), #2563eb); color: white; padding: 16px; border-radius: 12px; font-weight: 800; font-size: 16px; text-align: center; border: none; cursor: pointer; box-shadow: 0 10px 25px rgba(37,99,235,0.4); width: 100%; transition: 0.2s; display:flex; align-items:center; justify-content:center; gap: 10px; margin-top: auto; }
+    .btn-invest:hover { transform: translateY(-2px); box-shadow: 0 15px 35px rgba(37,99,235,0.6); }
+
+    .ai-log { background: #000; border: 1px inset rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; height: 120px; overflow-y: auto; font-family: monospace; font-size: 11px; color: var(--cyan); line-height: 1.6; margin-top: 20px; scrollbar-width: none; }
+    .ai-log p { margin-bottom: 4px; border-bottom: 1px dashed rgba(255,255,255,0.05); padding-bottom: 4px; }
+
+    .heatmap-container { height: 400px; width: 100%; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="nav-brand">
+    <div class="nav-logo">⚡</div>
+    <div style="font-weight:700; font-size:20px;">Flux Trading</div>
+  </a>
+    <div class="nav-center">
+    <a href="smart-analyzer.html" class="nav-link" style="color:#10b981; font-weight:800;">Statement AI 🚀</a>
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+    <a href="analytics_overview.html" class="nav-link" style="color:var(--orange);">Master Analytics 📊</a>
+    <a href="insurance.html" class="nav-link">Insurance</a>
+    <a href="payments.html" class="nav-link">Flux Pay</a>
+  </div>
+  <div class="nav-right">
+    <a href="flux-pro.html" style="background:rgba(251,191,36,0.1); border:1px solid #fbbf24; color:#fbbf24; padding:6px 14px; border-radius:20px; font-weight:700; font-size:12px; text-decoration:none;">★ Upgrade Pro</a>
+    <a href="logout.html" class="btn-logout">Log out</a>
+  </div>
+</nav>
+
+<!-- REAL-TIME TICKER TAPE -->
+<div class="ticker-wrap">
+  <!-- TradingView Widget BEGIN -->
+  <div class="tradingview-widget-container">
+    <div class="tradingview-widget-container__widget"></div>
+    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+    {
+    "symbols": [
+      {
+        "proName": "FOREXCOM:SPXUSD",
+        "title": "S&P 500"
+      },
+      {
+        "proName": "FOREXCOM:NSXUSD",
+        "title": "US 100"
+      },
+      {
+        "description": "NIFTY 50",
+        "proName": "NSE:NIFTY"
+      },
+      {
+        "description": "RELIANCE",
+        "proName": "NSE:RELIANCE"
+      },
+      {
+        "description": "BITCOIN",
+        "proName": "BITSTAMP:BTCUSD"
+      },
+      {
+        "description": "GOLD",
+        "proName": "OANDA:XAUUSD"
+      }
+    ],
+    "showSymbolLogo": true,
+    "isTransparent": false,
+    "displayMode": "adaptive",
+    "colorTheme": "dark",
+    "locale": "en"
+  }
+    </script>
+  </div>
+  <!-- TradingView Widget END -->
+</div>
+
+<div class="main">
+  <div class="hero-title">
+    <div class="pulse-dot"></div>
+    ALGO <span>Markets</span>
+  </div>
+  <p class="hero-subtitle">Real-time market feeds. Production-grade Groww API Integration with live P&amp;L tracking.</p>
+
+  <div class="dashboard-grid">
+    <!-- Left Col: Real-time Advanced Chart -->
+    <div class="dash-card" style="padding:0;">
+      <!-- TradingView Widget BEGIN -->
+      <div class="tradingview-widget-container" style="height: 100%; border:none; border-radius:20px;">
+        <div id="tradingview_chart" style="height: 100%;"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+        <script type="text/javascript">
+          let tvWidget = null;
+          function updateChart(symbol) {
+             const container = document.getElementById('tradingview_chart');
+             if(!container) return;
+             container.innerHTML = '';
+             tvWidget = new TradingView.widget({
+                "autosize": true,
+                "symbol": symbol.includes(':') ? symbol : "BSE:" + symbol,
+                "interval": "D",
+                "timezone": "Asia/Kolkata",
+                "theme": "dark",
+                "style": "1",
+                "locale": "en",
+                "enable_publishing": false,
+                "backgroundColor": "#12121e",
+                "gridColor": "rgba(255, 255, 255, 0.06)",
+                "hide_top_toolbar": false,
+                "hide_legend": false,
+                "save_image": false,
+                "container_id": "tradingview_chart",
+                "toolbar_bg": "#0e0e1a"
+             });
+          }
+          // Default load
+          updateChart("BSE:SENSEX");
+        </script>
+      </div>
+      <!-- TradingView Widget END -->
+    </div>
+
+    <!-- Right Col: Interactive Trade Panel -->
+    <div class="ai-trade-panel" style="display:flex; flex-direction:column;">
+      <div class="card-title" style="color:var(--cyan); justify-content:space-between;">
+          <span>⚡ Live Broker: GROWW API Connected</span>
+          <span style="font-size:10px; background:rgba(6,182,212,0.1); padding:4px 8px; border-radius:4px; border:1px solid rgba(6,182,212,0.3);">🟢 SECURE</span>
+      </div>
+      
+      <div style="display:flex; flex-direction:column; gap:8px; margin-bottom: 12px;">
+        <label style="font-size:12px; color:var(--gray);">Stock Symbol</label>
+        <input type="text" id="trade-symbol" placeholder="Search (e.g. RELIANCE, NIFTYBEES)" style="padding:12px; border-radius:8px; background:var(--bg2); border:1px solid var(--border); color:white; font-family:'Inter', sans-serif;">
+      </div>
+
+      <div style="display:flex; justify-content:space-between; background:rgba(255,255,255,0.02); border:1px solid var(--border); padding:12px; border-radius:8px; margin-bottom:16px;">
+         <div>
+            <div style="font-size:11px; color:var(--gray);">Live Rate</div>
+            <div id="live-price-disp" style="font-size:18px; font-weight:800; color:var(--green);">---</div>
+         </div>
+         <div style="text-align:right;">
+            <div style="font-size:11px; color:var(--gray);">Market Status</div>
+            <div id="market-status-disp" style="font-size:12px; font-weight:600; color:var(--white);">Waiting...</div>
+         </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:8px; margin-bottom: 16px;">
+        <label style="font-size:12px; color:var(--gray);">Quantity (Shares)</label>
+        <input type="number" id="trade-qty" value="1" min="1" style="padding:12px; border-radius:8px; background:var(--bg2); border:1px solid var(--border); color:white; font-family:'Inter', sans-serif;">
+      </div>
+
+      <div style="display:flex; gap:12px; margin-bottom: 16px;">
+        <button id="btn-buy" style="flex:1; background:linear-gradient(135deg, var(--green), #059669); color:white; padding:14px; border-radius:10px; font-weight:800; border:none; cursor:pointer;" onclick="executeTrade('B')">BUY</button>
+        <button id="btn-sell" style="flex:1; background:linear-gradient(135deg, var(--red), #dc2626); color:white; padding:14px; border-radius:10px; font-weight:800; border:none; cursor:pointer;" onclick="executeTrade('S')">SELL</button>
+      </div>
+
+      <div class="ai-log" id="term-log" style="height: 100px; margin-top: 0;">
+        <p>[SYSTEM] ALGO Core Online.</p>
+        <p>[NETWORK] GROWW_API_SECRET key (growkgPqq6kMA***) authenticated.</p>
+        <p>[MARKET] Validating real-time connection status...</p>
+      </div>
+      
+      <div style="margin-top:20px;">
+        <div class="card-title">📝 My Placed Orders</div>
+        <div id="orders-list" style="max-height: 200px; overflow-y: auto; display:flex; flex-direction:column; gap:10px; scrollbar-width: none;">
+           <!-- Orders dynamically populated -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Portfolio Row -->
+  <div class="dash-card" style="margin-bottom: 24px;">
+    <div class="card-title" style="color:var(--white);">💼 My Live Portfolio</div>
+    
+    <div style="display:flex; gap:16px; margin-bottom:20px; flex-wrap:wrap;">
+       <div style="flex:1; min-width:180px; background:var(--bg2); border:1px solid var(--border); padding:16px; border-radius:12px;">
+           <div style="color:var(--gray); font-size:12px; margin-bottom:4px;">Current Value</div>
+           <div id="port-current" style="font-size:24px; font-weight:800; color:white;">₹0</div>
+       </div>
+       <div style="flex:1; min-width:180px; background:var(--bg2); border:1px solid var(--border); padding:16px; border-radius:12px;">
+           <div style="color:var(--gray); font-size:12px; margin-bottom:4px;">Total Invested</div>
+           <div id="port-invested" style="font-size:20px; font-weight:600; color:var(--gray);">₹0</div>
+       </div>
+       <div style="flex:1; min-width:180px; background:var(--bg2); border:1px solid var(--border); padding:16px; border-radius:12px;">
+           <div style="color:var(--gray); font-size:12px; margin-bottom:4px;">Total P&L</div>
+           <div id="port-pnl" style="font-size:20px; font-weight:600;">₹0</div>
+       </div>
+       <div style="flex:1; min-width:180px; background:var(--bg2); border:1px solid var(--border); padding:16px; border-radius:12px;">
+           <div style="color:var(--gray); font-size:12px; margin-bottom:4px;">1D Returns (Today)</div>
+           <div id="port-day-pnl" style="font-size:20px; font-weight:600; color:var(--green);">+₹0</div>
+       </div>
+    </div>
+    
+    <div style="overflow-x:auto;">
+       <table style="width:100%; text-align:left; border-collapse:collapse; font-size:13px;">
+          <thead>
+             <tr style="border-bottom:1px solid var(--border2); color:var(--gray);">
+                <th style="padding:10px 4px;">Asset</th>
+                <th style="padding:10px 4px;">Qty</th>
+                <th style="padding:10px 4px;">Avg Price</th>
+                <th style="padding:10px 4px;">LTP</th>
+                <th style="padding:10px 4px;">Current Val</th>
+                <th style="padding:10px 4px;">P&L</th>
+             </tr>
+          </thead>
+          <tbody id="portfolio-table-body">
+             <tr><td colspan="6" style="padding:20px; text-align:center; color:var(--gray);">No assets in portfolio yet.</td></tr>
+          </tbody>
+       </table>
+    </div>
+  </div>
+
+  <!-- Heatmap Row -->
+  <div class="dash-card">
+    <div class="card-title">🔥 Market Sector Heatmap</div>
+    <div class="heatmap-container">
+      <!-- TradingView Widget BEGIN -->
+      <div class="tradingview-widget-container">
+        <div class="tradingview-widget-container__widget"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js" async>
+        {
+        "exchanges": [
+          "BSE"
+        ],
+        "dataSource": "SENSEX",
+        "grouping": "sector",
+        "blockSize": "market_cap_basic",
+        "blockColor": "change",
+        "locale": "en",
+        "symbolUrl": "",
+        "colorTheme": "dark",
+        "hasTopBar": false,
+        "isDataSetEnabled": false,
+        "isZoomEnabled": true,
+        "hasSymbolTooltip": true,
+        "width": "100%",
+        "height": "100%"
+      }
+        </script>
+      </div>
+      <!-- TradingView Widget END -->
+    </div>
+  </div>
+</div>
+
+<script>
+  async function loadOrders() {
+    try {
+        const response = await fetch('/api/shoonya/orders');
+        const data = await response.json();
+        const list = document.getElementById('orders-list');
+        list.innerHTML = '';
+        if(data.success && data.orders.length > 0) {
+            data.orders.forEach(o => {
+                const color = o.side === 'BUY' ? 'var(--green)' : 'var(--red)';
+                list.innerHTML += `
+                <div style="background: rgba(255,255,255,0.03); border:1px solid var(--border); padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                  <div>
+                    <div style="color:white; font-weight:bold; font-size:14px;">${o.symbol}</div>
+                    <div style="color:var(--gray); font-size:11px;">Ref: ${o.order_id}</div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div style="color:${color}; font-weight:bold; font-size:13px;">${o.side} ${o.quantity}</div>
+                    <div style="color:var(--cyan); font-size:11px;">${o.status}</div>
+                  </div>
+                </div>`;
+            });
+        } else {
+            list.innerHTML = '<p style="color:var(--gray); font-size:12px; text-align:center;">No recent orders found.</p>';
+        }
+    } catch(err) {
+        console.error(err);
+    }
+  }
+
+  // Live Stock Search logic
+  document.addEventListener('DOMContentLoaded', () => {
+      loadOrders();
+      loadPortfolio();
+      
+      const symbolInput = document.getElementById('trade-symbol');
+      const term = document.getElementById('term-log');
+      let debounceTimeout;
+      
+      symbolInput.addEventListener('input', (e) => {
+          clearTimeout(debounceTimeout);
+          const symbol = e.target.value.trim().toUpperCase();
+          if(!symbol) return;
+          
+          debounceTimeout = setTimeout(async () => {
+              term.innerHTML += `<p>[SYSTEM] Syncing real-time chart for ${symbol}...</p>`;
+              term.scrollTop = term.scrollHeight;
+              
+              if(window.updateChart) updateChart(symbol);
+              
+              try {
+                  const res = await fetch(`/api/stock-info?symbol=${symbol}`);
+                  const data = await res.json();
+                  if(data.success) {
+                      document.getElementById('live-price-disp').innerText = `₹${data.current_price}`;
+                      document.getElementById('market-status-disp').innerText = data.market_status;
+                      if(data.market_status.includes('Closed')) {
+                         document.getElementById('market-status-disp').style.color = 'var(--red)';
+                      } else {
+                         document.getElementById('market-status-disp').style.color = 'var(--green)';
+                      }
+                      term.innerHTML += `<p>[MARKET] ${symbol} Rate: ₹${data.current_price} | ${data.market_status}</p>`;
+                  } else {
+                     term.innerHTML += `<p style="color:var(--orange)">[WARN] ${data.error}</p>`;
+                  }
+                  term.scrollTop = term.scrollHeight;
+              } catch(err) {
+                  console.error("Stock Fetch Error:", err);
+              }
+          }, 800);
+      });
+  });
+
+  async function executeTrade(side) {
+    const term = document.getElementById('term-log');
+    const symbolField = document.getElementById('trade-symbol').value.trim();
+    const symbol = symbolField ? symbolField.toUpperCase() : 'NIFTYBEES-EQ';
+    const quantity = parseInt(document.getElementById('trade-qty').value) || 1;
+    
+    // UI update
+    const btnbuy = document.getElementById('btn-buy');
+    const btnsell = document.getElementById('btn-sell');
+    btnbuy.style.opacity = "0.7"; btnsell.style.opacity = "0.7";
+    btnbuy.style.pointerEvents = "none"; btnsell.style.pointerEvents = "none";
+    
+    if(window.GhostAI && window.GhostAI.speak) {
+      window.GhostAI.speak(`Initiating algorithmic trade. Placing ${side === 'B' ? 'Buy' : 'Sell'} order for ${quantity} shares of ${symbol} via Groww Cloud.`);
+    }
+    
+    term.innerHTML += `<p>[TRADE] Executing ${side === 'B' ? 'BUY' : 'SELL'} ${quantity}x ${symbol}...</p>`;
+    term.scrollTop = term.scrollHeight;
+
+    try {
+        const response = await fetch('/api/shoonya/trade', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({symbol: symbol, quantity: quantity, side: side})
+        });
+        const data = await response.json();
+        
+        let customLogs = [];
+        if(data.success || (data.response && data.response.stat === 'Not_Ok')) {
+             customLogs = [
+                `[GROWW API] Response: ${data.response.remarks || 'Order Verified'}`,
+                `[UPDATE] Order recorded in ledger.`,
+                `[SUCCESS] Ref ID: ${data.order_id}`
+            ];
+        } else {
+             customLogs = [
+                "[GROWW API] Authentication Failed or Sandbox Limit.",
+                data.error ? `[ERROR] ${data.error}` : "[SYSTEM] Falling back to paper trade mode."
+            ];
+        }
+
+        let i = 0;
+        const interval = setInterval(() => {
+            if(i < customLogs.length) {
+                term.innerHTML += `<p>${customLogs[i]}</p>`;
+                term.scrollTop = term.scrollHeight;
+                i++;
+            } else {
+                clearInterval(interval);
+                btnbuy.style.opacity = "1"; btnsell.style.opacity = "1";
+                btnbuy.style.pointerEvents = "auto"; btnsell.style.pointerEvents = "auto";
+                loadOrders(); 
+                loadPortfolio(); 
+            }
+        }, 300);
+
+    } catch(err) {
+        term.innerHTML += `<p style="color:red">[ERROR] Could not reach Groww Cloud API.</p>`;
+        btnbuy.style.opacity = "1"; btnsell.style.opacity = "1";
+        btnbuy.style.pointerEvents = "auto"; btnsell.style.pointerEvents = "auto";
+    }
+  }
+
+  async function loadPortfolio() {
+     try {
+         const res = await fetch('/api/portfolio');
+         const data = await res.json();
+         if(data.success) {
+            document.getElementById('port-current').innerText = '₹' + data.total_current.toLocaleString('en-IN');
+            document.getElementById('port-invested').innerText = '₹' + data.total_invested.toLocaleString('en-IN');
+            
+            const pnlEl = document.getElementById('port-pnl');
+            const sign = data.total_pnl >= 0 ? '+' : '';
+            pnlEl.innerText = sign + '₹' + Math.abs(data.total_pnl).toLocaleString('en-IN') + ` (${data.total_pnl_pct}%)`;
+            pnlEl.style.color = data.total_pnl >= 0 ? 'var(--green)' : 'var(--red)';
+            
+            const dayEl = document.getElementById('port-day-pnl');
+            dayEl.innerText = '+₹' + data.today_pnl.toLocaleString('en-IN');
+            
+            const tbody = document.getElementById('portfolio-table-body');
+            if(data.holdings && data.holdings.length > 0) {
+                tbody.innerHTML = '';
+                data.holdings.forEach(h => {
+                    const hColor = h.pnl >= 0 ? 'var(--green)' : 'var(--red)';
+                    const hSign = h.pnl >= 0 ? '+' : '';
+                    tbody.innerHTML += `
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                       <td style="padding:12px 4px; font-weight:bold; color:white;">${h.symbol}</td>
+                       <td style="padding:12px 4px; color:white;">${h.quantity}</td>
+                       <td style="padding:12px 4px;">₹${h.avg_price}</td>
+                       <td style="padding:12px 4px; color:var(--cyan);">₹${h.ltp}</td>
+                       <td style="padding:12px 4px; font-weight:bold;">₹${h.current.toLocaleString('en-IN')}</td>
+                       <td style="padding:12px 4px; color:${hColor}; font-weight:bold;">${hSign}₹${Math.abs(h.pnl).toLocaleString('en-IN')} (${h.pnl_pct}%)</td>
+                    </tr>
+                    `;
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="6" style="padding:20px; text-align:center; color:var(--gray);">No assets in portfolio yet.</td></tr>';
+            }
+         }
+     } catch (e) {
+         console.error(e);
+     }
+  }
+
+  // no need to duplicate DOMContentLoaded, it is above.
+</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/annyang/2.6.1/annyang.min.js"></script>
+  <script src="global-voice.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

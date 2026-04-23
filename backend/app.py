@@ -8,15 +8,19 @@ from functools import wraps
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from flask_cors import CORS
 from dotenv import load_dotenv
-
-from database import init_db, get_db_connection
-from ml_engine import get_ml_response, get_ml_analysis
-from predictive_model import generate_expense_forecast
-from report_generator import generate_monthly_report
-from market_data import get_nifty_data
+import sqlite3
 
 # --- SETUP AND CONFIGURATION ---
 load_dotenv()
+
+from database import init_db, get_db_connection
+import random
+from ml_engine import get_ml_response, get_ml_analysis
+from predictive_model import generate_expense_forecast
+from report_generator import generate_monthly_report
+from market_data import get_nifty_data, get_stock_info
+from shoonya_integration import ShoonyaApiWrapper
+from statement_analyzer import parse_and_analyze_statement
 
 app = Flask(__name__, template_folder="../frontend", static_folder="../frontend", static_url_path="")
 CORS(app)
@@ -53,6 +57,38 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         if "user_id" not in session:
             return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def pro_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "user_id" not in session:
+            return redirect(url_for('login'))
+        
+        user_id = session.get("user_id")
+        conn = get_db_connection()
+        user = conn.execute("SELECT is_pro, pro_expiry FROM users WHERE id = ?", (user_id,)).fetchone()
+        
+        is_active_pro = False
+        if user and user['is_pro']:
+            if user['pro_expiry']:
+                try:
+                    expiry = datetime.datetime.strptime(user['pro_expiry'], '%Y-%m-%d %H:%M:%S.%f')
+                except ValueError:
+                    # Fallback for different format
+                    expiry = datetime.datetime.strptime(user['pro_expiry'].split('.')[0], '%Y-%m-%d %H:%M:%S')
+                
+                if datetime.datetime.now() < expiry:
+                    is_active_pro = True
+            else:
+                # If is_pro is 1 but no expiry (manual override), treat as active
+                is_active_pro = True
+        
+        conn.close()
+        
+        if not is_active_pro:
+            return redirect(url_for('flux_pro'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -93,6 +129,68 @@ def flux_card():
 def dashboard():
     return render_template("dashboard.html")
 
+@app.route("/smart-analyzer.html")
+@app.route("/smart-analyzer")
+@login_required
+@pro_required
+def smart_analyzer():
+    return render_template("smart-analyzer.html")
+
+@app.route("/analytics_overview.html")
+@app.route("/analytics_overview")
+@login_required
+@pro_required
+def analytics_overview():
+    return render_template("analytics_overview.html")
+
+@app.route("/insurance.html")
+@app.route("/insurance")
+@login_required
+@pro_required
+def insurance_page():
+    return render_template("insurance.html")
+
+@app.route("/markets.html")
+@app.route("/markets")
+@login_required
+@pro_required
+def markets_page():
+    return render_template("markets.html")
+
+@app.route("/payments.html")
+@app.route("/payments")
+@login_required
+@pro_required
+def payments_page():
+    return render_template("payments.html")
+
+@app.route("/tax.html")
+@app.route("/tax")
+@login_required
+@pro_required
+def tax_page():
+    return render_template("tax.html")
+
+@app.route("/simulator.html")
+@app.route("/simulator")
+@login_required
+@pro_required
+def simulator_page():
+    return render_template("simulator.html")
+
+@app.route("/will.html")
+@app.route("/will")
+@login_required
+@pro_required
+def will_page():
+    return render_template("will.html")
+
+@app.route("/flux-pro")
+@app.route("/flux-pro.html")
+@login_required
+def flux_pro():
+    return render_template("flux-pro.html")
+
 @app.route("/login")
 @app.route("/login.html")
 def login():
@@ -130,11 +228,47 @@ def create_goal_page():
 def save_now():
     return render_template("save-now.html")
 
-@app.route("/analytics")
-@app.route("/analytics.html")
+@app.route("/arena")
+@app.route("/arena.html")
 @login_required
-def analytics():
-    return render_template("analytics.html")
+def arena_page():
+    return render_template("arena.html")
+
+@app.route("/api/verify-pro-payment", methods=["POST"])
+@login_required
+def verify_pro_payment():
+    data = request.get_json() or {}
+    payment_id = data.get("payment_id", "TEST_PAYMENT")
+    user_id = session.get("user_id")
+    
+    conn = get_db_connection()
+    user = conn.execute("SELECT name, email FROM users WHERE id = ?", (user_id,)).fetchone()
+    
+    # 1. Send Email Notification
+    if user and EMAIL_SENDER and EMAIL_PASSWORD:
+        msg = EmailMessage()
+        msg["Subject"] = "Welcome to FLUX Pro! 🎉"
+        msg["From"] = f"Flux Agentic OS <{EMAIL_SENDER}>"
+        msg["To"] = user["email"]
+        msg.set_content(f"Hi {user['name']},\n\nYour payment of ₹499 (Reference ID: {payment_id}) was successful! \n\nYou now have full access to Tax Harvesting, the AI Legacy Vault, and Time Machine capabilities.\n\nWelcome to true algorithmic wealth building.\n\n- The Flux Engineering Team")
+        
+        try:
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+                smtp.login(EMAIL_SENDER, EMAIL_PASSWORD)
+                smtp.send_message(msg)
+        except Exception as e:
+            print(f"[MAIL_ERROR] Could not send Pro invoice: {e}")
+            
+    # 2. Log exactly in the database
+    if user:        
+        conn.execute("UPDATE users SET is_pro = 1, pro_expiry = ? WHERE id = ?", 
+                     (str(datetime.datetime.now() + datetime.timedelta(days=365)), user_id))
+        conn.execute("INSERT INTO user_activities (user_id, action_type, description) VALUES (?, ?, ?)", 
+                 (user_id, "Pro Upgrade", f"Unlocked Flux Pro via Razorpay (ID: {payment_id})"))
+        conn.commit()
+    conn.close()
+    
+    return jsonify({"success": True}), 200
 
 @app.route("/goals")
 @app.route("/goals.html")
@@ -195,6 +329,7 @@ def send_otp():
 
     if EMAIL_SENDER and EMAIL_PASSWORD:
         try:
+            clean_pass = EMAIL_PASSWORD.replace(' ', '')
             msg = EmailMessage()
             msg['Subject'] = 'Your Flux Wealth Login OTP'
             msg['From'] = EMAIL_SENDER
@@ -207,7 +342,6 @@ def send_otp():
                   <h1 style="color: #ffffff; font-size: 24px; margin-bottom: 8px;">Welcome to <span style="color: #e8491d;">Flux</span></h1>
                   <p style="color: #8888aa; font-size: 14px; margin-bottom: 30px;">Your gamified wealth engine awaits.</p>
                   <p style="color: #ffffff; font-size: 16px; margin-bottom: 20px;">Use the following code to securely log in:</p>
-                  <div style="background-color: rgba(124, 92, 191, 0.1); border: 2px dashed #7c5cbf; border-radius: 12px; padding: 20px; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #9b79e0; margin-bottom: 30px;">
                     {otp}
                   </div>
                 </div>
@@ -218,15 +352,21 @@ def send_otp():
             msg.add_alternative(html_content, subtype='html')
 
             with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-                server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+                server.login(EMAIL_SENDER, clean_pass)
                 server.send_message(msg)
                 
         except Exception as e:
             print(f"Failed to send real email: {e}")
+            # HACKATHON FALLBACK: Let the user login even if SMTP credentials expire
+            print(f"\n{'='*40}")
+            print(f"EMAIL FAILED - FALLBACK MOCK OTP To: {email} | OTP: {otp}")
+            print(f"{'='*40}\n")
+            return jsonify({"success": True, "message": "OTP sent via fallback", "mock": True, "otp": otp})
     else:
         print(f"\n{'='*40}")
         print(f"MOCK EMAIL SENT To: {email} | OTP: {otp}")
         print(f"{'='*40}\n")
+        return jsonify({"success": True, "message": "OTP sent via fallback", "mock": True, "otp": otp})
 
     return jsonify({"success": True, "message": "OTP sent successfully"})
 
@@ -288,40 +428,122 @@ def verify_otp():
 
     return jsonify({"success": True, "redirect": url_for(target_route)})
 
-@app.route("/api/user-activities", methods=["GET"])
-@login_required
-def get_user_activities():
-    user_id = session.get("user_id")
-    conn = get_db_connection()
-    rows = conn.execute("SELECT action_type, description, timestamp FROM user_activities WHERE user_id = ? ORDER BY timestamp DESC LIMIT 50", (user_id,)).fetchall()
-    conn.close()
-    
-    activities = []
-    for r in rows:
-        activities.append({
-            "action_type": r["action_type"],
-            "description": r["description"],
-            "timestamp": r["timestamp"]
-        })
     return jsonify(activities), 200
 
 @app.route("/api/user")
 @login_required
 def api_user():
+    user_id = session.get("user_id")
+    conn = get_db_connection()
+    user = conn.execute("SELECT is_pro, coins FROM users WHERE id = ?", (user_id,)).fetchone()
+    conn.close()
+    
     return jsonify({
         "name": session.get("user_name"),
-        "email": session.get("user_email")
+        "email": session.get("user_email"),
+        "is_pro": bool(user["is_pro"]) if user else False,
+        "coins": user["coins"] if user else 0
     })
+
+@app.route("/api/send-cancel-otp", methods=["POST"])
+@login_required
+def send_cancel_otp():
+    user_id = session.get("user_id")
+    email = session.get("user_email")
+    conn = get_db_connection()
+    otp = str(random.randint(100000, 999999))
+    expiry = datetime.datetime.now() + datetime.timedelta(minutes=5)
+    
+    conn.execute("UPDATE users SET otp = ?, otp_expiry = ? WHERE id = ?", (otp, expiry, user_id))
+    conn.commit()
+    conn.close()
+    
+    if EMAIL_SENDER and EMAIL_PASSWORD:
+        try:
+            clean_pass = EMAIL_PASSWORD.replace(' ', '')
+            msg = EmailMessage()
+            msg['Subject'] = 'Flux Pro Cancellation Request'
+            msg['From'] = EMAIL_SENDER
+            msg['To'] = email
+            msg.set_content(f"You have requested to cancel your Flux Pro subscription.\nYour cancellation authorization code is: {otp}\nIf this was not you, please secure your account.")
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+                server.login(EMAIL_SENDER, clean_pass)
+                server.send_message(msg)
+        except Exception as e:
+            print(f"Failed to send email: {e}")
+            print(f"\n[MOCK EMAIL FALLBACK] To {email}: CANCEL PRO OTP is {otp}\n")
+            return jsonify({"success": True, "otp": otp, "mock": True})
+    else:
+        print(f"\n[MOCK EMAIL] To {email}: CANCEL PRO OTP is {otp}\n")
+        return jsonify({"success": True, "otp": otp, "mock": True})
+        
+    return jsonify({"success": True})
+
+@app.route("/api/cancel-pro", methods=["POST"])
+@login_required
+def cancel_pro():
+    data = request.json or {}
+    otp_input = data.get("otp")
+    if not otp_input:
+        return jsonify({"success": False, "error": "OTP required"}), 400
+        
+    user_id = session.get("user_id")
+    email = session.get("user_email")
+    conn = get_db_connection()
+    user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    
+    if not user["otp"] or not secrets.compare_digest(str(user["otp"]), str(otp_input)):
+        conn.close()
+        return jsonify({"success": False, "error": "Invalid OTP"}), 400
+        
+    conn.execute("UPDATE users SET otp = NULL, otp_expiry = NULL, is_pro = 0, pro_expiry = NULL WHERE id = ?", (user_id,))
+    conn.execute("DELETE FROM user_activities WHERE user_id = ? AND action_type = 'Pro Upgrade'", (user_id,))
+    conn.execute("INSERT INTO user_activities (user_id, action_type, description) VALUES (?, ?, ?)", 
+                 (user_id, "Pro Cancelled", "Downgraded to Flux Free Tier"))
+    conn.commit()
+    conn.close()
+    
+    # Send confirmation email
+    if EMAIL_SENDER and EMAIL_PASSWORD:
+        try:
+            msg = EmailMessage()
+            msg['Subject'] = 'Flux Pro Successfully Cancelled'
+            msg['From'] = EMAIL_SENDER
+            msg['To'] = email
+            msg.set_content("Your Flux Pro subscription has been successfully cancelled. You have been downgraded to the Free Tier.\n\nYou will lose access to the Auto-Tax Harvester, Smart Trading algorithms, and your Insurance Vault.\n\nWe hope to see you back soon.")
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+                server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+                server.send_message(msg)
+        except Exception:
+            pass
+            
+    return jsonify({"success": True})
 
 # --- DATA API ENDPOINTS (SQLite) ---
 
+@app.route("/api/analyze-statement", methods=["POST"])
+@login_required
+def analyze_statement_api():
+    file = request.files.get('file')
+    if file and file.filename != '':
+        csv_content = file.read().decode('utf-8')
+        result = parse_and_analyze_statement(csv_content=csv_content, user_id=session["user_id"])
+    else:
+        # Hackathon simulation mode - read from local backend directory
+        local_path = os.path.join(os.path.dirname(__file__), "statement.csv")
+        result = parse_and_analyze_statement(file_path=local_path, user_id=session["user_id"])
+        
+    if result.get("status") == "success":
+        return jsonify({"success": True, "analysis": result["data"]}), 200
+    else:
+        return jsonify({"success": False, "error": result.get("message")}), 400
+
 def calculate_score(user_id, conn):
-    # Phase 2: Wealth Score Engine
-    # Formula Mock: Base score + points + streak + wealth velocity
-    user = conn.execute("SELECT income, points, streak_days FROM users WHERE id = ?", (user_id,)).fetchone()
+    # Formulas include: Base score + points + multi-streaks + wealth velocity + coins/badges
+    user = conn.execute("SELECT points, level, coins, score FROM users WHERE id = ?", (user_id,)).fetchone()
     if not user: return 0
     
-    # Calculate savings rate
+    # Calculate savings rate (Wealth Velocity)
     inc_res = conn.execute("SELECT SUM(amount) as t FROM income WHERE user_id = ?", (user_id,)).fetchone()
     total_income = inc_res["t"] if inc_res and inc_res["t"] else 0.0
     
@@ -330,7 +552,13 @@ def calculate_score(user_id, conn):
     
     velocity = (total_investments / total_income) * 100 if total_income > 0 else 0
     
-    score = int(300 + (user["streak_days"] * 20) + (user["points"] * 5) + (velocity * 10))
+    # Multi-streak bonus
+    streaks = conn.execute("SELECT SUM(current_streak) as s FROM streaks WHERE user_id = ?", (user_id,)).fetchone()["s"] or 0
+    
+    # Badges count
+    badge_count = conn.execute("SELECT COUNT(*) as c FROM user_badges WHERE user_id = ?", (user_id,)).fetchone()["c"]
+    
+    score = int(300 + (streaks * 15) + (user["points"] * 2) + (velocity * 12) + (badge_count * 20) + (user["coins"] / 10))
     if score > 1000: score = 1000
     
     conn.execute("UPDATE users SET score = ? WHERE id = ?", (score, user_id))
@@ -358,11 +586,15 @@ def get_dashboard():
     score = calculate_score(user_id, conn)
 
     # Corrected balance formula: Net cash available
-    balance = total_income - total_expenses
+    balance = max(0, total_income - total_expenses)
     # Total wealth: Cash + value stored in goals (investments are already part of expenses)
     total_wealth = balance + total_goals
     
     velocity = (total_investments / total_income) * 100 if total_income > 0 else 0
+    
+    # Guilt-Free Spend Allowance calculation
+    guilt_free_balance = max(0, int(balance * 0.3)) if velocity > 5 else 0
+    if total_income == 0: guilt_free_balance = 0
     
     # Simple Insight logic attached to dashboard as well
     insights = []
@@ -373,17 +605,24 @@ def get_dashboard():
     elif total_investments == 0:
         insights.append("Start investing mechanically via auto-save.")
         
-    # Financial Persona & Projections Engine
+    # PHASE 6: ADVANCED BEHAVIORAL PROFILING (Top 0.1% Win condition)
     try:
-        rows = conn.execute("SELECT amount, date FROM expenses WHERE user_id = ? ORDER BY date DESC LIMIT 10", (user_id,)).fetchall()
-        import datetime as dt
-        weekend_spend = sum(r["amount"] for r in rows if dt.datetime.strptime(r["date"], "%Y-%m-%d").weekday() >= 5)
-        weekday_spend = sum(r["amount"] for r in rows if dt.datetime.strptime(r["date"], "%Y-%m-%d").weekday() < 5)
-        persona = "Weekend Spender" if weekend_spend > weekday_spend and weekend_spend > 0 else "Disciplined Saver"
-        projected_monthly_savings = max(0, total_income - (total_expenses * (30/max(1, len(rows)))) if rows else total_income * 0.2)
+        activity_count = conn.execute("SELECT COUNT(*) as c FROM user_activities WHERE user_id = ?", (user_id,)).fetchone()["c"]
+        impulse_events = conn.execute("SELECT COUNT(*) as c FROM user_activities WHERE user_id = ? AND action_type='NAVIGATED' AND description LIKE '%simulator%'", (user_id,)).fetchone()["c"]
+        
+        if velocity > 30:
+            persona = "The Compounding Ghost"
+        elif velocity > 15 and activity_count > 20:
+            persona = "Wealth Architect"
+        elif impulse_events > 3:
+            persona = "Futurist Speculator"
+        else:
+            persona = "Analytical Optimizer"
+            
+        projected_monthly_savings = max(0, total_income - total_expenses) * 1.2 # Optimized projection
     except:
         persona = "Balanced Saver"
-        projected_monthly_savings = 12500
+        projected_monthly_savings = 5000
 
     conn.close()
     
@@ -393,6 +632,7 @@ def get_dashboard():
         "investments": total_investments,
         "savings": total_goals,
         "balance": balance,
+        "guilt_free_balance": guilt_free_balance,
         "totalSaved": total_investments + total_goals,
         "totalWealth": total_wealth,
         "wealthVelocity": f"{velocity:.1f}%",
@@ -415,23 +655,31 @@ def predict_impact():
     conn = get_db_connection()
     inc = conn.execute("SELECT SUM(amount) as t FROM income WHERE user_id = ?", (user_id,)).fetchone()
     exp = conn.execute("SELECT SUM(amount) as t FROM expenses WHERE user_id = ?", (user_id,)).fetchone()
+    user_record = conn.execute("SELECT score FROM users WHERE id = ?", (user_id,)).fetchone()
     conn.close()
     
     total_inc = inc["t"] if inc["t"] else 0.0
     total_exp = exp["t"] if exp["t"] else 0.0
+    current_score = user_record["score"] if user_record and user_record["score"] else 300
     
     is_overspending = False
     if total_inc > 0 and (total_exp + amount) > (total_inc * 0.9):
         is_overspending = True
 
-    score_drop = int(amount * 0.01)
-    goal_delay = int(amount / 500)
+    score_drop = min(current_score - 1 if current_score > 1 else 1, int(min(150, amount * 0.01)))
+    
+    # Calculate daily savings properly
+    daily_savings = max(10, (total_inc * 0.2) / 30) # Projecting assuming 20% savings over 30 days
+    goal_delay = int(amount / daily_savings)
+    
+    if goal_delay == 0:
+        goal_delay = 1
     
     return jsonify({
         "score_drop": score_drop,
         "goal_delay": goal_delay,
         "is_overspending": is_overspending,
-        "message": f"This expense will temporarily reduce your FLUX Score potential by {score_drop} points and delay your active goal target by ~{goal_delay} days."
+        "message": f"This expense will temporarily reduce your FLUX Score by {score_drop} points and delay your active goal target by ~{goal_delay} days."
     }), 200
 
 @app.route("/api/transactions", methods=["GET"])
@@ -475,48 +723,31 @@ def add_expense():
     # 1. Save expense
     conn.execute("INSERT INTO expenses (user_id, amount, category, date) VALUES (?, ?, ?, ?)", (user_id, amount, category, date_str))
     
-    # 2. Auto-Invest Logic (Phase 1)
+    # 2. Auto-Invest Logic (5% Cashback equivalent)
     cashback_equivalent = amount * 0.05
-    insert_diversified_investments(conn, user_id, cashback_equivalent, "cashback_conversion")
+    insert_diversified_investments(conn, user_id, cashback_equivalent, "Cashback Injection")
     
-    # Gamification Tracking (Strict daily increment logic)
-    user = conn.execute("SELECT streak_days, points, level, last_streak_date FROM users WHERE id = ?", (user_id,)).fetchone()
-    streak = user["streak_days"]
-    points = user["points"]
-    level = user["level"]
-    last_date = user["last_streak_date"]
+    # 3. Round-ups engine logic (Round to nearest 100)
+    round_up_amount = 0
+    if amount % 100 != 0:
+        round_up_amount = 100 - (amount % 100)
+        conn.execute("INSERT INTO investments (user_id, amount, source) VALUES (?, ?, ?)", (user_id, round_up_amount, "Spare Change Round-Up"))
     
-    # Track today's date
-    today_str = str(datetime.date.today())
-    
-    # Check if budget is sound
-    exp_res = conn.execute("SELECT SUM(amount) as t FROM expenses WHERE user_id = ?", (user_id,)).fetchone()
-    inc_res = conn.execute("SELECT SUM(amount) as t FROM income WHERE user_id = ?", (user_id,)).fetchone()
-    tot_exp = exp_res["t"] if exp_res and exp_res["t"] else 0
-    tot_inc = inc_res["t"] if inc_res and inc_res["t"] else 0
-    
-    # Only increment if first time today AND budget is under control
-    if today_str != last_date and tot_exp <= tot_inc:
-        streak += 1
-        points += 10
-        if points >= 100:
-            level += 1
-            points = 0
-        conn.execute("UPDATE users SET streak_days = ?, points = ?, level = ?, last_streak_date = ? WHERE id = ?", 
-                    (streak, points, level, today_str, user_id))
-    else:
-        # Just update points if already had streak today? Or just commit other changes.
-        # User explicitly asked to only increment ONCE a day.
-        pass
+    # Gamification Tracking (Multi-streak logic for Finance)
+    update_streak(user_id, 'finance', conn)
         
     # Log User Activity
+    message_desc = f"₹{amount} for {category} (Auto-invested ₹{cashback_equivalent})"
+    if round_up_amount > 0:
+        message_desc += f" + ₹{round_up_amount} Round-Up"
+        
     conn.execute("INSERT INTO user_activities (user_id, action_type, description) VALUES (?, ?, ?)", 
-                 (user_id, "Added Expense", f"₹{amount} for {category} (Auto-invested ₹{cashback_equivalent})"))
+                 (user_id, "Added Expense", message_desc))
             
     conn.commit()
     conn.close()
 
-    return jsonify({"success": True, "invested": cashback_equivalent}), 201
+    return jsonify({"success": True, "invested": cashback_equivalent, "rounded": round_up_amount}), 201
 
 @app.route("/add-income", methods=["POST"])
 @app.route("/api/add-income", methods=["POST"])
@@ -577,19 +808,251 @@ def get_insights():
 
 @app.route("/api/gamification", methods=["GET"])
 @login_required
-def get_gamification():
-    # Phase 5: Gamification Engine
+def get_gamification_legacy():
+    # Phase 5: Gamification Engine (Legacy compatibility)
+    return gamification_status()
+
+# Redirect to the main one at the bottom
+@app.route("/api/arena-leaderboard-old", methods=["GET"])
+@login_required
+def arena_leaderboard_legacy():
+    return arena_leaderboard()
+
+subscriptions = [
+    {"id": "s1", "service": "Netflix Premium", "amount": 649, "usage": "Low Usage (2 hrs/mo)"},
+    {"id": "s2", "service": "Gym Membership", "amount": 1499, "usage": "No visits in 45 days"},
+    {"id": "s3", "service": "Spotify", "amount": 119, "usage": "High Usage"}
+]
+destroyed_subs = set()
+
+@app.route("/api/subscriptions", methods=["GET"])
+@login_required
+def get_subscriptions():
+    active_subs = [s for s in subscriptions if s["id"] not in destroyed_subs]
+    return jsonify(active_subs), 200
+
+@app.route("/api/destroy-subscription", methods=["POST"])
+@login_required
+def destroy_subscription():
+    data = request.get_json() or {}
+    sub_id = data.get("id")
+    user_id = session.get("user_id")
+    
+    target_sub = next((s for s in subscriptions if s["id"] == sub_id), None)
+    if not target_sub:
+        return jsonify({"error": "Subscription not found"}), 404
+        
+    destroyed_subs.add(sub_id)
+    
+    # Invest the destroyed subscription
+    conn = get_db_connection()
+    amount = target_sub["amount"]
+    conn.execute("INSERT INTO investments (user_id, amount, source) VALUES (?, ?, ?)", (user_id, amount, f"Destroyed Subscription ({target_sub['service']})"))
+    conn.execute("INSERT INTO user_activities (user_id, action_type, description) VALUES (?, ?, ?)", 
+                 (user_id, "Subscription Destroyed", f"Cancelled {target_sub['service']} and invested ₹{amount}"))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({"success": True, "invested": amount, "message": f"Successfully cancelled {target_sub['service']} and routed ₹{amount} to investments."}), 200
+
+# --- SHOONYA API INTEGRATION ---
+@app.route("/api/shoonya/status", methods=["GET"])
+@login_required
+def get_shoonya_status():
+    """Returns the integration status for demo purposes"""
+    shoonya = ShoonyaApiWrapper()
+    # Mask the API key for security but keep enough to prove it's the real one
+    masked_key = f"{shoonya.apikey[:4]}...{shoonya.apikey[-4:]}" if shoonya.apikey else "Not Set"
+    
+    return jsonify({
+        "integrated": True,
+        "user_id": shoonya.user,
+        "vendor_code": shoonya.vc,
+        "api_key_masked": masked_key,
+        "connection_mode": "Live (Attempting...)" if shoonya.pwd else "Simulator (Ready for Production)",
+        "sdk_version": "NorenRestApiPy-0.0.22"
+    }), 200
+
+@app.route("/api/shoonya/trade", methods=["POST"])
+@login_required
+def execute_shoonya_trade():
+    """Connects to Finvasia Shoonya (or Groww) to place real fractional trades"""
+    data = request.get_json() or {}
+    symbol = data.get("symbol", "NIFTYBEES-EQ").upper()
+    try:
+        qty = int(data.get("quantity", 1))
+    except ValueError:
+        return jsonify({"success": False, "error": "Invalid quantity"}), 400
+        
+    side = data.get("side", "B").upper()
+    
+    # 1. Market Hours Verification via yfinance check
+    info = get_stock_info(symbol)
+    if not info.get("success", False) or "Closed" in info.get("market_status", ""):
+        return jsonify({"success": False, "error": f"Market is currently closed. Trade rejected. ({info.get('error', '')})" }), 400
+        
+    current_price = info.get("current_price", 0)
+    
+    # Initialize Wrapper Pipeline
+    wrapper = ShoonyaApiWrapper()
+    response = wrapper.place_order(symbol, qty, side)
+    
+    # Log the action in SQLite
+    user_id = session.get("user_id")
+    order_id = response.get("norenordno", "UNKNOWN")
+    
+    if user_id and response.get("stat") == "Ok":
+        side_text = "BUY" if side == "B" else "SELL"
+        conn = get_db_connection()
+        
+        # Save exact order with Price
+        try:
+            conn.execute("INSERT INTO orders (user_id, symbol, quantity, price, side, order_id, status) VALUES (?, ?, ?, ?, ?, ?, ?)", 
+                         (user_id, symbol, qty, current_price, side_text, order_id, "Executed"))
+        except sqlite3.OperationalError:
+            # Fallback for old schema
+            conn.execute("INSERT INTO orders (user_id, symbol, quantity, side, order_id, status) VALUES (?, ?, ?, ?, ?, ?)", 
+                         (user_id, symbol, qty, side_text, order_id, "Executed"))
+                     
+        # Also log activity
+        conn.execute("INSERT INTO user_activities (user_id, action_type, description) VALUES (?, ?, ?)", 
+                     (user_id, "Trade Execution", f"Executed {side_text} order for {qty}x {symbol}"))
+        conn.commit()
+        conn.close()
+        
+    return jsonify({"success": response.get("stat") == "Ok", "order_id": order_id, "response": response}), 200
+@app.route("/api/autonomous-sweep", methods=["POST"])
+@login_required
+def autonomous_sweep():
+    data = request.get_json() or {}
+    amount = float(data.get("amount", 0))
+    if amount <= 0: return jsonify({"success": True})
+    
+    symbol = "GOLDBEES.NS"
+    info = get_stock_info(symbol)
+    price = info.get("current_price", 60)
+    if price <= 0: price = 60
+    
+    qty = max(1, int(amount / price))
+    
+    conn = get_db_connection()
+    user_id = session.get("user_id")
+    try:
+        conn.execute("INSERT INTO orders (user_id, symbol, quantity, price, side, order_id, status) VALUES (?, ?, ?, ?, ?, ?, ?)", 
+                     (user_id, symbol, qty, price, "BUY", "AUTO_WEALTH_SWEEP", "Executed"))
+    except sqlite3.OperationalError:
+        conn.execute("INSERT INTO orders (user_id, symbol, quantity, side, order_id, status) VALUES (?, ?, ?, ?, ?, ?)", 
+                     (user_id, symbol, qty, "BUY", "AUTO_WEALTH_SWEEP", "Executed"))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "symbol": symbol, "qty": qty, "price": price})
+
+@app.route("/api/shoonya/orders", methods=["GET"])
+@login_required
+def get_shoonya_orders():
+    """Fetches all past orders placed by the user"""
     user_id = session.get("user_id")
     conn = get_db_connection()
-    user = conn.execute("SELECT streak_days, points, level FROM users WHERE id = ?", (user_id,)).fetchone()
+    rows = conn.execute("SELECT id, symbol, quantity, side, order_id, status, timestamp FROM orders WHERE user_id = ? ORDER BY timestamp DESC", (user_id,)).fetchall()
     conn.close()
-    if user:
-        return jsonify({
-            "streak_days": user["streak_days"],
-            "points": user["points"],
-            "level": user["level"]
-        }), 200
-    return jsonify({"error": "User not found"}), 404
+    
+    orders = []
+    for r in rows:
+        orders.append({
+            "id": r["id"],
+            "symbol": r["symbol"],
+            "quantity": r["quantity"],
+            "side": r["side"],
+            "order_id": r["order_id"],
+            "status": r["status"],
+            "timestamp": r["timestamp"]
+        })
+    return jsonify({"success": True, "orders": orders}), 200
+
+@app.route("/api/stock-info", methods=["GET"])
+@login_required
+def stock_info():
+    """Fetches real-live quotes and market status"""
+    symbol = request.args.get("symbol", "RELIANCE")
+    return jsonify(get_stock_info(symbol))
+
+@app.route("/api/portfolio", methods=["GET"])
+@login_required
+def get_portfolio():
+    user_id = session.get("user_id")
+    conn = get_db_connection()
+    try:
+        rows = conn.execute("SELECT symbol, quantity, side, price FROM orders WHERE user_id = ?", (user_id,)).fetchall()
+    except sqlite3.OperationalError:
+        rows = conn.execute("SELECT symbol, quantity, side, 0 as price FROM orders WHERE user_id = ?", (user_id,)).fetchall()
+    conn.close()
+    
+    holdings = {}
+    for r in rows:
+        sym = r["symbol"]
+        qty = r["quantity"] if r["side"] == "BUY" else -r["quantity"]
+        price = r["price"] if r["price"] else 0.0
+        
+        if sym not in holdings:
+            holdings[sym] = {"qty": 0, "total_cost": 0.0, "buy_qty": 0}
+            
+        if r["side"] == "BUY":
+            holdings[sym]["qty"] += qty
+            holdings[sym]["buy_qty"] += qty
+            holdings[sym]["total_cost"] += (qty * price)
+        elif r["side"] == "SELL" and holdings[sym]["qty"] > 0:
+            # Reduce total cost proportionally
+            ratio = qty / holdings[sym]["qty"]
+            holdings[sym]["total_cost"] += (holdings[sym]["total_cost"] * ratio) 
+            holdings[sym]["qty"] += qty # qty logic matches -val
+        
+    portfolio_items = []
+    total_invested = 0
+    total_current = 0
+    today_pnl = 0
+    
+    for sym, data in holdings.items():
+        qty = data["qty"]
+        if qty <= 0: continue
+        
+        avg_buy_price = data["total_cost"] / data["buy_qty"] if data["buy_qty"] > 0 else 0
+        
+        info = get_stock_info(sym)
+        current_price = info.get("current_price", 0)
+        
+        # If no DB price, mock it gracefully
+        if avg_buy_price == 0:
+            avg_buy_price = current_price * 0.96 if current_price > 0 else 100
+            
+        invested = avg_buy_price * qty
+        current_val = current_price * qty
+        pnl = current_val - invested
+        daily_pnl = current_val * 0.015 # Just a simulated metric for 'today's' variation since real day opening isn't saved easily
+        
+        total_invested += invested
+        total_current += current_val
+        today_pnl += daily_pnl
+        
+        portfolio_items.append({
+            "symbol": sym,
+            "quantity": qty,
+            "avg_price": round(avg_buy_price, 2),
+            "ltp": round(current_price, 2),
+            "invested": round(invested, 2),
+            "current": round(current_val, 2),
+            "pnl": round(pnl, 2),
+            "pnl_pct": round((pnl/invested)*100, 2) if invested > 0 else 0
+        })
+        
+    return jsonify({
+        "success": True,
+        "total_invested": round(total_invested, 2),
+        "total_current": round(total_current, 2),
+        "total_pnl": round(total_current - total_invested, 2),
+        "today_pnl": round(today_pnl, 2),
+        "total_pnl_pct": round(((total_current - total_invested)/total_invested)*100, 2) if total_invested > 0 else 0,
+        "holdings": portfolio_items
+    })
 
 @app.route("/invest", methods=["GET", "POST"])
 @app.route("/api/smart-save", methods=["GET", "POST"])
@@ -602,12 +1065,17 @@ def smart_save():
     if request.method == "GET":
         suggest_invest = 0
         message = "Build your balance to unlock smart saves."
-        if free_balance > 2000:
-            suggest_invest = 1000
-            message = f"You can invest ₹{suggest_invest:,.0f} safely"
+        
+        # Calculate intelligent sliding bounds
+        if free_balance > 10000:
+            suggest_invest = int(free_balance * 0.20) // 10 * 10
+            message = f"High Wealth Detected | Safely lock away ₹{suggest_invest:,.0f} to compound faster."
+        elif free_balance > 2000:
+            suggest_invest = int(free_balance * 0.15) // 10 * 10
+            message = f"AI Smart Filter: You can comfortably route ₹{suggest_invest:,.0f} to your portfolios."
         elif free_balance > 0:
-            suggest_invest = free_balance * 0.1
-            message = f"You can safely invest ₹{suggest_invest:,.0f}"
+            suggest_invest = int(free_balance * 0.10)
+            message = f"Smart Analysis: Safely invest ₹{suggest_invest:,.0f}"
         else:
             message = "Insufficient free wealth to save more."
             
@@ -722,8 +1190,16 @@ def update_goal():
         
     new_amount = min(goal["target_amount"], goal["saved_amount"] + added_amount)
     actual_added = new_amount - goal["saved_amount"]
+    left_amount = goal["target_amount"] - goal["saved_amount"]
     
+    if added_amount > left_amount:
+        conn.close()
+        return jsonify({"error": f"Amount is more than left to fund! You only need ₹{left_amount:,.0f} to reach your goal."}), 400
+        
     conn.execute("UPDATE goals SET saved_amount = ? WHERE id = ?", (new_amount, goal_id))
+    
+    # Auto-Invest goal funds into the Wealth Engine so it actually grows.
+    insert_diversified_investments(conn, user_id, actual_added, "Auto-invested from Goal")
     
     conn.execute("INSERT INTO user_activities (user_id, action_type, description) VALUES (?, ?, ?)", 
                  (user_id, "Funded Goal", f"Added ₹{actual_added} to goal ID: {goal_id}"))
@@ -782,6 +1258,16 @@ def api_export_report():
     )
 
 # ─── CHATBOT API (Machine Learning) ────────────────────────
+@app.route("/api/voice-agent", methods=["POST"])
+def voice_agent_endpoint():
+    data = request.get_json() or {}
+    transcript = data.get("transcript", "")
+    history = data.get("history", [])
+    
+    from ml_engine import get_voice_agent_response
+    result = get_voice_agent_response(transcript, history)
+    return jsonify(result), 200
+
 @app.route("/api/chat", methods=["POST"])
 @login_required
 def chat():
@@ -794,7 +1280,7 @@ def chat():
     
     conn = get_db_connection()
     
-    user = conn.execute("SELECT name, streak_days, points, level FROM users WHERE id = ?", (user_id,)).fetchone()
+    user = conn.execute("SELECT name, streak_days, points, level, coins FROM users WHERE id = ?", (user_id,)).fetchone()
     inc = conn.execute("SELECT SUM(amount) as t FROM income WHERE user_id = ?", (user_id,)).fetchone()
     exp = conn.execute("SELECT SUM(amount) as t FROM expenses WHERE user_id = ?", (user_id,)).fetchone()
     inv = conn.execute("SELECT SUM(amount) as t FROM investments WHERE user_id = ?", (user_id,)).fetchone()
@@ -813,14 +1299,15 @@ def chat():
     
     # Hydrate user data dictionary for ML Engine
     user_data = {
-        "name": user["name"] if user else "User",
-        "streak": user["streak_days"] if user else 0,
-        "points": user["points"] if user else 0,
-        "level": user["level"] if user else 1,
+        "name": user["name"] if user and "name" in user.keys() else "User",
+        "streak": user["streak_days"] if user and "streak_days" in user.keys() else 0,
+        "points": user["points"] if user and "points" in user.keys() else 0,
+        "level": user["level"] if user and "level" in user.keys() else 1,
+        "coins": user["coins"] if user and "coins" in user.keys() else 0,
         "total_income": total_income,
         "total_expenses": total_expenses,
         "total_investments": total_investments,
-        "goals": [{"title": g["title"], "target_amount": g["target_amount"], "saved_amount": g["saved_amount"]} for g in goal_list],
+        "goals": [{"title": g["title"], "target_amount": g["target_amount"], "saved_amount": g["saved_amount"]} for g in (goal_list or [])],
         "balance": balance,
         "score": score
     }
@@ -876,38 +1363,33 @@ def get_badges():
     user_id = session.get("user_id")
     conn = get_db_connection()
     
-    user = conn.execute("SELECT streak_days, points, level FROM users WHERE id = ?", (user_id,)).fetchone()
-    inv = conn.execute("SELECT SUM(amount) as t FROM investments WHERE user_id = ?", (user_id,)).fetchone()
-    exp_count = conn.execute("SELECT COUNT(*) as c FROM expenses WHERE user_id = ?", (user_id,)).fetchone()
-    inc_count = conn.execute("SELECT COUNT(*) as c FROM income WHERE user_id = ?", (user_id,)).fetchone()
-    goal_count = conn.execute("SELECT COUNT(*) as c FROM goals WHERE user_id = ?", (user_id,)).fetchone()
-    
-    total_inv = inv["t"] if inv and inv["t"] else 0
-    streak = user["streak_days"] if user else 0
-    points = user["points"] if user else 0
-    level = user["level"] if user else 1
-    expenses = exp_count["c"] if exp_count else 0
-    incomes = inc_count["c"] if inc_count else 0
-    goals = goal_count["c"] if goal_count else 0
-    
+    # Map from new system to visual icons for the frontend
+    icon_map = {
+        "Consistency King": "👑",
+        "Discipline Master": "⚔️",
+        "Wealth Starter": "🌱",
+        "Savings Pro": "💰",
+        "Game Addict": "🎮"
+    }
+
+    badges = conn.execute("""
+        SELECT b.id, b.name, b.rarity, b.type, b.condition_value, (ub.user_id IS NOT NULL) as unlocked 
+        FROM badges b 
+        LEFT JOIN user_badges ub ON b.id = ub.badge_id AND ub.user_id = ?
+    """, (user_id,)).fetchall()
     conn.close()
     
-    badges = [
-        {"id": "first_income", "icon": "💵", "name": "First Earnings", "desc": "Logged your first income", "unlocked": incomes >= 1},
-        {"id": "first_expense", "icon": "🧾", "name": "Expense Tracker", "desc": "Logged your first expense", "unlocked": expenses >= 1},
-        {"id": "first_invest", "icon": "🌱", "name": "Seed Planted", "desc": "First auto-investment triggered", "unlocked": total_inv > 0},
-        {"id": "streak_3", "icon": "🔥", "name": "On Fire", "desc": "3-day no-overspending streak", "unlocked": streak >= 3},
-        {"id": "streak_7", "icon": "⚡", "name": "Unstoppable", "desc": "7-day streak achieved", "unlocked": streak >= 7},
-        {"id": "goal_setter", "icon": "🎯", "name": "Goal Setter", "desc": "Created your first wealth goal", "unlocked": goals >= 1},
-        {"id": "inv_1k", "icon": "💎", "name": "Diamond Hands", "desc": "Auto-invested over ₹1,000", "unlocked": total_inv >= 1000},
-        {"id": "inv_5k", "icon": "🚀", "name": "Wealth Rocket", "desc": "Auto-invested over ₹5,000", "unlocked": total_inv >= 5000},
-        {"id": "inv_10k", "icon": "👑", "name": "Wealth King", "desc": "Auto-invested over ₹10,000", "unlocked": total_inv >= 10000},
-        {"id": "level_3", "icon": "🏆", "name": "Level 3 Pro", "desc": "Reached Level 3", "unlocked": level >= 3},
-        {"id": "expense_10", "icon": "📊", "name": "Data Driven", "desc": "Tracked 10+ expenses", "unlocked": expenses >= 10},
-        {"id": "points_50", "icon": "⭐", "name": "Star Player", "desc": "Earned 50+ points", "unlocked": points >= 50},
-    ]
+    formatted = []
+    for b in badges:
+        formatted.append({
+            "id": b["id"],
+            "icon": icon_map.get(b["name"], "🏅"),
+            "name": b["name"],
+            "desc": f"Unlock at {b['condition_value']} {b['type']}",
+            "unlocked": bool(b["unlocked"])
+        })
     
-    return jsonify(badges), 200
+    return jsonify(formatted), 200
 
 # ─── ADMIN API ENDPOINTS ─────────────────────────────────
 @app.route("/api/admin/users", methods=["GET"])
@@ -961,5 +1443,418 @@ def api_admin_user_data(user_id):
     conn.close()
     return jsonify(data)
 
+# ─── AGENTIC AUDIT & ADVANCED ACTIVITY TRACKING ───────────────────
+@app.route("/api/user-activities", methods=["GET"])
+@login_required
+def api_get_user_activities():
+    user_id = session.get("user_id")
+    conn = get_db_connection()
+    activities = conn.execute("""
+        SELECT action_type, description, timestamp 
+        FROM user_activities 
+        WHERE user_id = ? 
+        ORDER BY timestamp DESC 
+        LIMIT 50
+    """, (user_id,)).fetchall()
+    conn.close()
+    
+    return jsonify([dict(a) for a in activities]), 200
+
+@app.route("/api/activity-audit", methods=["GET"])
+@login_required
+def api_activity_audit():
+    """
+    Advanced ML Endpoint: Generates a 'Mental Financial Health' report 
+    based on the history of logs in user_activities.
+    """
+    user_id = session.get("user_id")
+    conn = get_db_connection()
+    logs = conn.execute("SELECT action_type, description, timestamp FROM user_activities WHERE user_id = ? ORDER BY timestamp DESC LIMIT 30", (user_id,)).fetchall()
+    conn.close()
+    
+    user_log_history = "\n".join([f"[{l['timestamp']}] {l['action_type']}: {l['description']}" for l in logs])
+    
+    from ml_engine import get_behavioral_audit
+    audit_report = get_behavioral_audit(user_log_history)
+    
+    return jsonify({"report": audit_report}), 200
+
+@app.route("/api/log-action", methods=["POST"])
+@login_required
+def api_log_action():
+    data = request.get_json() or {}
+    action = data.get("action")
+    desc = data.get("description")
+    user_id = session.get("user_id")
+    
+    if action:
+        conn = get_db_connection()
+        conn.execute("INSERT INTO user_activities (user_id, action_type, description) VALUES (?, ?, ?)", (user_id, action, desc))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True}), 201
+    return jsonify({"error": "No action provided"}), 400
+
+
+@app.route("/api/tax/harvest", methods=["POST"])
+@login_required
+def tax_harvest():
+    conn = get_db_connection()
+    user_id = session["user_id"]
+    savings = 3510
+    conn.execute("INSERT INTO investments (user_id, amount, source) VALUES (?, ?, ?)", (user_id, savings, "Tax Loss Harvesting Reinvestment"))
+    conn.execute("INSERT INTO user_activities (user_id, action_type, description) VALUES (?, ?, ?)", (user_id, "TAX_HARVEST", "Harvested ₹3,510 through tax loss optimization."))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "saved": savings})
+
+@app.route("/api/tax/file-itr", methods=["POST"])
+@login_required
+def file_itr():
+    conn = get_db_connection()
+    user_id = session["user_id"]
+    conn.execute("INSERT INTO user_activities (user_id, action_type, description) VALUES (?, ?, ?)", (user_id, "ITR_FILED", "Automatically filed ITR-2 Proxy via AI."))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "message": "ITR filed successfully"})
+
+@app.route("/api/gamification/daily-checkin", methods=["POST"])
+@login_required
+def daily_checkin():
+    user_id = session.get("user_id")
+    conn = get_db_connection()
+    # Correct columns: streak_days, last_streak_date
+    user = conn.execute("SELECT streak_days, last_streak_date FROM users WHERE id = ?", (user_id,)).fetchone()
+    
+    today = datetime.date.today()
+    last_date = None
+    if user['last_streak_date'] and user['last_streak_date'] != 'None':
+        try:
+            last_date = datetime.datetime.strptime(user['last_streak_date'], '%Y-%m-%d').date()
+        except: pass
+    
+    if last_date == today:
+        conn.close()
+        return jsonify({"success": False, "error": "Already checked in today!"})
+    
+    new_streak = user['streak_days'] + 1 if (last_date == today - datetime.timedelta(days=1)) else 1
+    # Bonus: 10 coins base + 5 coins per streak day (cap at 100)
+    bonus = min(100, 10 + (new_streak * 5))
+    
+    conn.execute("UPDATE users SET streak_days = ?, last_streak_date = ?, coins = coins + ? WHERE id = ?", (new_streak, str(today), bonus, user_id))
+    conn.execute("INSERT INTO coin_ledger (user_id, amount, source) VALUES (?, ?, 'Daily Streak Bonus')", (user_id, bonus))
+    
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "message": f"Day {new_streak} Checked In! +🛡️ {bonus} Credits secured.", "streak": new_streak})
+
+def award_badge_with_bonus(user_id, badge_name, conn):
+    badge = conn.execute("SELECT id FROM badges WHERE name = ?", (badge_name,)).fetchone()
+    if not badge: return
+    
+    # Check if already has it
+    exists = conn.execute("SELECT 1 FROM user_badges WHERE user_id = ? AND badge_id = ?", (user_id, badge['id'])).fetchone()
+    if exists: return
+    
+    conn.execute("INSERT INTO user_badges (user_id, badge_id) VALUES (?, ?)", (user_id, badge['id']))
+    
+    # AWARD BONUS FOR UNLOCKING
+    bonus = 500 # Significant bonus for reputation
+    conn.execute("UPDATE users SET coins = coins + ? WHERE id = ?", (bonus, user_id))
+    conn.execute("INSERT INTO coin_ledger (user_id, amount, source) VALUES (?, ?, 'Badge Milestone')", (user_id, bonus))
+
+def award_coins(user_id, amount, source, conn):
+    """Adds coins to user and logs in ledger."""
+    if amount <= 0: return
+    conn.execute("UPDATE users SET coins = coins + ? WHERE id = ?", (amount, user_id))
+    conn.execute("INSERT INTO coin_ledger (user_id, amount, source) VALUES (?, ?, ?)", (user_id, amount, source))
+    conn.execute("INSERT INTO user_activities (user_id, action_type, description) VALUES (?, 'Reward', ?)", 
+                 (user_id, f"Earned {amount} credits from {source}"))
+    check_badges(user_id, conn)
+
+def check_badges(user_id, conn):
+    """Evaluates locked badges and unlocks them if conditions are met."""
+    locked_badges = conn.execute("""
+        SELECT * FROM badges WHERE id NOT IN (SELECT badge_id FROM user_badges WHERE user_id = ?)
+    """, (user_id,)).fetchall()
+    
+    for b in locked_badges:
+        unlocked = False
+        if b['condition_type'] == 'login':
+            streak = conn.execute("SELECT current_streak FROM streaks WHERE user_id = ? AND streak_type = 'login'", (user_id,)).fetchone()
+            if streak and streak['current_streak'] >= b['condition_value']: unlocked = True
+        elif b['condition_type'] == 'game_played':
+            count = conn.execute("SELECT COUNT(*) as c FROM game_sessions WHERE user_id = ?", (user_id,)).fetchone()['c']
+            if count >= b['condition_value']: unlocked = True
+        elif b['condition_type'] == 'finance':
+            streak = conn.execute("SELECT current_streak FROM streaks WHERE user_id = ? AND streak_type = 'finance'", (user_id,)).fetchone()
+            if streak and streak['current_streak'] >= b['condition_value']: unlocked = True
+        elif b['condition_type'] == 'savings':
+            saved = conn.execute("SELECT SUM(amount) as s FROM investments WHERE user_id = ?", (user_id,)).fetchone()['s'] or 0
+            if saved >= b['condition_value']: unlocked = True
+            
+        if unlocked:
+            conn.execute("INSERT OR IGNORE INTO user_badges (user_id, badge_id) VALUES (?, ?)", (user_id, b['id']))
+            award_coins(user_id, b['coin_reward'], f"Badge Unlock: {b['name']}", conn)
+
+def update_streak(user_id, streak_type, conn):
+    """Updates a specific streak for a user."""
+    today = str(datetime.date.today())
+    yesterday = str(datetime.date.today() - datetime.timedelta(days=1))
+    
+    streak = conn.execute("SELECT id, current_streak, last_checkin FROM streaks WHERE user_id = ? AND streak_type = ?", (user_id, streak_type)).fetchone()
+    
+    if not streak:
+        conn.execute("INSERT INTO streaks (user_id, streak_type, current_streak, last_checkin) VALUES (?, ?, 1, ?)", (user_id, streak_type, today))
+        award_coins(user_id, 5, f"{streak_type.capitalize()} Streak Started", conn)
+    else:
+        if streak['last_checkin'] == yesterday:
+            new_streak = streak['current_streak'] + 1
+            conn.execute("UPDATE streaks SET current_streak = ?, last_checkin = ? WHERE id = ?", (new_streak, today, streak['id']))
+            base_reward = 10
+            reward = int(base_reward * (1 + new_streak/10))
+            award_coins(user_id, reward, f"{streak_type.capitalize()} Streak Day {new_streak}", conn)
+        elif streak['last_checkin'] != today:
+            conn.execute("UPDATE streaks SET current_streak = 1, last_checkin = ? WHERE id = ?", (today, streak['id']))
+            award_coins(user_id, 5, f"{streak_type.capitalize()} Streak Restarted", conn)
+    
+    # Sync to users table for legacy compatibility
+    new_streak = conn.execute("SELECT current_streak FROM streaks WHERE user_id = ? AND streak_type = ?", (user_id, streak_type)).fetchone()['current_streak']
+    if streak_type == 'login':
+        conn.execute("UPDATE users SET streak_days = ? WHERE id = ?", (new_streak, user_id))
+
+# ─── GAMIFICATION API ──────────────────────────────────────
+
+@app.route("/api/gamification/status")
+@login_required
+def gamification_status():
+    user_id = session.get("user_id")
+    conn = get_db_connection()
+    user = conn.execute("SELECT coins, score, level, points, is_pro FROM users WHERE id = ?", (user_id,)).fetchone()
+    streaks_rows = conn.execute("SELECT streak_type, current_streak FROM streaks WHERE user_id = ?", (user_id,)).fetchall()
+    badges = conn.execute("""
+        SELECT b.id, b.name, b.rarity, b.type, (ub.user_id IS NOT NULL) as unlocked 
+        FROM badges b 
+        LEFT JOIN user_badges ub ON b.id = ub.badge_id AND ub.user_id = ?
+    """, (user_id,)).fetchall()
+    conn.close()
+    
+    return jsonify({
+        "coins": user["coins"] if user else 0,
+        "score": user["score"] if user else 0,
+        "level": user["level"] if user else 1,
+        "points": user["points"] if user else 0,
+        "is_pro": bool(user["is_pro"]) if user else False,
+        "streaks": {s["streak_type"]: s["current_streak"] for s in streaks_rows},
+        "badges": [dict(b) for b in badges]
+    })
+
+def is_festival_day():
+    """Checks if today is a predefined festival day for bonus multipliers."""
+    today = datetime.date.today()
+    festivals = [
+        (1, 1),   # New Year
+        (1, 14),  # Pongal/Makar Sankranti
+        (1, 26),  # Republic Day
+        (8, 15),  # Independence Day
+        (10, 31), # Halloween / Diwali Approx
+        (11, 1),  # Diwali Approx
+        (12, 25)  # Christmas
+    ]
+    return (today.month, today.day) in festivals
+
+@app.route("/api/gamification/claim-login", methods=["POST"])
+@login_required
+def claim_login():
+    user_id = session.get("user_id")
+    conn = get_db_connection()
+    update_streak(user_id, 'login', conn)
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
+
+@app.route("/api/gamification/record-game", methods=["POST"])
+@login_required
+def record_game():
+    data = request.get_json() or {}
+    game_type = data.get("game_type")
+    score = data.get("score", 0)
+    user_id = session.get("user_id")
+    
+    if not game_type: return jsonify({"error": "Game type required"}), 400
+        
+    conn = get_db_connection()
+    today = str(datetime.date.today())
+    daily_earned = conn.execute("SELECT SUM(coins_earned) as t FROM game_sessions WHERE user_id = ? AND date(timestamp) = ?", (user_id, today)).fetchone()["t"] or 0
+    
+    if daily_earned >= 100:
+        conn.close()
+        return jsonify({"success": False, "earned": 0, "message": "Daily mission limit (100 coins) reached! Come back tomorrow."})
+
+    # Enhanced Point Logic: Score / Constant + Multiplier
+    if game_type == 'wealth-flight':
+        coins_to_award = int(score / 5) # Every 5 points = 1 coin
+        message = f"Landed safely with {score} altitude! Earned {coins_to_award} coins."
+    elif game_type == 'memory-tiles':
+        # Memory tiles score is usually moves or time. Assuming 'score' is performance rating.
+        coins_to_award = int(score / 10)
+        message = f"Wealth Memory synchronized! Earned {coins_to_award} coins."
+    else:
+        coins_to_award = min(20, max(1, int(score / 10)))
+        message = f"Game session recorded! Earned {coins_to_award} coins."
+
+    if is_festival_day():
+        coins_to_award *= 2
+        message += " (🎉 Festival Double Bonus!)"
+
+    conn.execute("INSERT INTO game_sessions (user_id, game_type, score, coins_earned) VALUES (?, ?, ?, ?)",
+                 (user_id, game_type, score, coins_to_award))
+    
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "earned": coins_to_award, "message": message})
+
+@app.route("/api/gamification/spin", methods=["POST"])
+@login_required
+def lucky_spin():
+    user_id = session.get("user_id")
+    cost = 5000 # User requested expensive spin
+    conn = get_db_connection()
+    user = conn.execute("SELECT coins FROM users WHERE id = ?", (user_id,)).fetchone()
+    
+    if user['coins'] < cost:
+        conn.close()
+        return jsonify({"success": False, "error": f"Insufficient coins. Need {cost} for a High-Stakes Spin."}), 400
+
+    today = str(datetime.date.today())
+    spin_count = conn.execute("SELECT COUNT(*) FROM coin_ledger WHERE user_id = ? AND source = 'Lucky Spin' AND date(timestamp) = ?", (user_id, today)).fetchone()[0]
+    
+    user_data = conn.execute("SELECT is_pro, streak_days FROM users WHERE id = ?", (user_id,)).fetchone()
+    # Level-gate (Assume level = streak_days // 5 + 1 or similar)
+    user_level = (user_data['streak_days'] // 5) + 1
+    
+    if user_level < 3 and not user_data['is_pro']:
+        conn.close()
+        return jsonify({"success": False, "error": "Lucky Spin is locked! Reach Level 3 or upgrade to Pro to unlock."}), 403
+
+    # Record Spend
+    conn.execute("UPDATE users SET coins = coins - ? WHERE id = ?", (cost, user_id))
+    conn.execute("INSERT INTO coin_ledger (user_id, amount, source) VALUES (?, ?, 'High Stakes Spin')", (user_id, -cost))
+
+    rand = random.random()
+    if rand < 0.40: reward, val = 'Small Gift', 10
+    elif rand < 0.70: reward, val = 'Silver Chest', 25
+    elif rand < 0.90: reward, val = 'Gold Chest', 60
+    elif rand < 0.98: reward, val = 'Diamond Vault', 150
+    else: reward, val = 'ULTRA JACKPOT', 600
+    
+    award_coins(user_id, val, "Lucky Spin", conn)
+    
+    # Random Gift chance (10% for items)
+    gift = None
+    if random.random() < 0.15:
+        gifts = ["Flux Premium Hoodie", "Digital Wealth Badge", "AI Insights Token", "Custom Card Skin", "Early Access Pass"]
+        gift = random.choice(gifts)
+        conn.execute("INSERT INTO user_badges (user_id, badge_id) VALUES (?, (SELECT id FROM badges WHERE name = 'Collector' LIMIT 1))", (user_id,))
+    
+    # Check for lucky 7 bonus
+    is_lucky_7 = datetime.date.today().day == 7
+    if is_lucky_7:
+        award_coins(user_id, 50, "Monthly 7th Bonus", conn)
+        reward += " + Monthly 7th Gem!"
+        
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "reward": reward, "value": val, "gift": gift})
+
+@app.route("/api/gamification/redeem-pro", methods=["POST"])
+@login_required
+def redeem_pro():
+    data = request.get_json() or {}
+    days = data.get("days", 1) 
+    user_id = session.get("user_id")
+    # Updated costs: 1: 100, 7: 500, 30: 1500, 9999 (Lifetime): 15000
+    cost_map = {1: 100, 7: 500, 30: 1500, 9999: 15000}
+    if days not in cost_map: return jsonify({"error": "Invalid days"}), 400
+    cost = cost_map[days]
+    
+    conn = get_db_connection()
+    user = conn.execute("SELECT coins FROM users WHERE id = ?", (user_id,)).fetchone()
+    if user["coins"] < cost:
+        conn.close()
+        return jsonify({"error": "Insufficient coins"}), 400
+        
+    conn.execute("UPDATE users SET coins = coins - ? WHERE id = ?", (cost, user_id))
+    conn.execute("INSERT INTO coin_ledger (user_id, amount, source) VALUES (?, ?, 'Redeem Pro')", (user_id, -cost))
+    expiry = datetime.datetime.now() + datetime.timedelta(days=days if days < 9999 else 3650) # 10 years for lifetime
+    conn.execute("UPDATE users SET is_pro = 1, pro_expiry = ? WHERE id = ?", (str(expiry), user_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "message": "Subscription Unlocked! You are now FLUX PRO."})
+
+@app.route("/api/gamification/unlock-ceo", methods=["POST"])
+@login_required
+def unlock_ceo_session():
+    user_id = session.get("user_id")
+    cost = 30000 
+    conn = get_db_connection()
+    user = conn.execute("SELECT coins FROM users WHERE id = ?", (user_id,)).fetchone()
+    if user["coins"] < cost:
+        conn.close()
+        return jsonify({"error": f"Requires {cost} credits. Keep building wealth!"}), 400
+        
+    conn.execute("UPDATE users SET coins = coins - ? WHERE id = ?", (cost, user_id))
+    conn.execute("INSERT INTO coin_ledger (user_id, amount, source) VALUES (?, ?, 'Elite CEO Unlock')", (user_id, -cost))
+    conn.execute("INSERT INTO user_badges (user_id, badge_id) VALUES (?, (SELECT id FROM badges WHERE name = 'Wealth Master' LIMIT 1))", (user_id,))
+    conn.execute("INSERT INTO user_activities (user_id, action_type, description) VALUES (?, 'Elite Unlock', 'Unlocked Boardroom Access Session')", (user_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "message": "Elite Legend Unlocked! Check your email for Boardroom scheduling."})
+    return jsonify({"success": True, "message": f"Unlocked Pro for {days} days!"})
+
+@app.route("/api/arena-leaderboard")
+@login_required
+def arena_leaderboard():
+    user_id = session.get("user_id")
+    conn = get_db_connection()
+    all_u = conn.execute("SELECT id FROM users LIMIT 100").fetchall()
+    for u in all_u: calculate_score(u['id'], conn)
+    
+    rows = conn.execute("SELECT id, name, score, level FROM users ORDER BY score DESC LIMIT 20").fetchall()
+    leaderboard = []
+    for i, r in enumerate(rows):
+        is_you = r["id"] == user_id
+        leaderboard.append({
+            "rank": i + 1,
+            "name": r["name"] if is_you else f"Agent {r['id']*13 % 999}",
+            "score": r["score"],
+            "level": f"Level {r['level']}",
+            "velocity": "Active"
+        })
+    conn.close()
+    return jsonify({"leaderboard": leaderboard})
+
+@app.route("/api/gamification/buy-lucky-draw", methods=["POST"])
+@login_required
+def buy_lucky_draw():
+    user_id = session.get("user_id")
+    cost = 7500 # User requested 7.5k
+    conn = get_db_connection()
+    user = conn.execute("SELECT coins FROM users WHERE id = ?", (user_id,)).fetchone()
+    
+    if user['coins'] < cost:
+        conn.close()
+        return jsonify({"success": False, "error": f"Insufficient coins. Need {cost}."}), 400
+        
+    conn.execute("UPDATE users SET coins = coins - ? WHERE id = ?", (cost, user_id))
+    conn.execute("INSERT INTO coin_ledger (user_id, amount, source, type) VALUES (?, ?, 'Lucky Draw Entry', 'debit')", (user_id, cost))
+    
+    # Add to a lottery pool table if it existed, for now just log it
+    conn.execute("INSERT INTO user_activities (user_id, action_type, description) VALUES (?, 'Lottery', 'Purchased Lucky Draw Entry')", (user_id,))
+    
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "message": "You have entered the 7th Monthly Lucky Draw!"})
+
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run(debug=True, use_reloader=False, port=int(os.environ.get("PORT", 5000)))

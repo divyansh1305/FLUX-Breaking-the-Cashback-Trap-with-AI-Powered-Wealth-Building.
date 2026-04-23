@@ -36,6 +36,11 @@
     .btn-submit { background:linear-gradient(135deg,var(--red2),var(--red)); color:#fff; width:100%; border:none; padding:16px; border-radius:40px; font-weight:700; font-size:16px; cursor:pointer; margin-top:10px; transition:0.2s; text-decoration:none; display:inline-block; }
     .btn-submit:hover { transform:translateY(-2px); box-shadow:0 10px 25px rgba(239,68,68,0.3); }
 
+    .btn-scan { background:rgba(255,255,255,0.05); color:var(--orange); border:1px solid rgba(232,73,29,0.3); width:100%; padding:14px; border-radius:40px; font-weight:700; font-size:14px; cursor:pointer; margin-top:10px; transition:0.2s; }
+    .btn-scan:hover { background:rgba(232,73,29,0.1); border-color:var(--orange); }
+
+    @keyframes scanLine { 0% {top:0;} 50% {top:100%;} 100% {top:0;} }
+
     .warning { font-size:12px; color:var(--gray); margin-top:16px; display:flex; align-items:center; justify-content:center; gap:6px; }
 
     .trap-detector {
@@ -81,7 +86,16 @@
         <option value="Bills">Bills</option>
       </select>
     </div>
+    
+    <button type="button" class="btn-scan" id="btn-scan" onclick="triggerScan()">📸 Scan Receipt (AI Vision)</button>
     <button type="submit" class="btn-submit">Record Spend</button>
+    
+    <div id="ai-scan-overlay" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:50; border-radius:32px; flex-direction:column; align-items:center; justify-content:center;">
+        <div style="width:100px; height:100px; border:2px dashed #e8491d; border-radius:12px; display:flex; align-items:center; justify-content:center; animation:pulse 1s infinite; margin-bottom:16px; position:relative;">
+            <div style="width:100%; height:2px; background:#e8491d; position:absolute; top:0; animation:scanLine 1.5s linear infinite;"></div>
+        </div>
+        <div style="color:var(--orange); font-weight:700; font-size:14px; letter-spacing:1px;" id="scan-text">AI Parsing Receipt...</div>
+    </div>
     
     <!-- Cashback Trap Detector -->
     <div class="trap-detector" id="trapDetector">
@@ -131,6 +145,26 @@
       trapPanel.classList.remove('visible');
     }
   });
+
+  // AI Vision receipt parser mock
+  function triggerScan() {
+    const overlay = document.getElementById('ai-scan-overlay');
+    overlay.style.display = 'flex';
+    setTimeout(() => {
+        document.getElementById('scan-text').innerText = 'Extracting Total...';
+    }, 800);
+    setTimeout(() => {
+        const fakeTotal = (Math.random() * 400 + 150).toFixed(0); 
+        document.getElementById('amt').value = fakeTotal;
+        document.getElementById('cat').value = 'Food & Dining';
+        overlay.style.display = 'none';
+        document.getElementById('scan-text').innerText = 'AI Parsing Receipt...';
+        
+        // Trigger generic input event to fire the detector
+        const ev = new Event('input');
+        document.getElementById('amt').dispatchEvent(ev);
+    }, 2000);
+  }
 
   document.getElementById('expenseForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -188,7 +222,21 @@
     });
     
     if (result.isConfirmed) {
-        await addExpense(cat, amt);
+        const data = await addExpense(cat, amt);
+        if (data && data.invested) {
+             let msg = `Flux successfully captured ₹${data.invested.toLocaleString('en-IN')} of this transaction and routed it directly into your Wealth Engine.`;
+             if (data.rounded && data.rounded > 0) {
+                 msg += `<br><br><span style="color:#34d399; font-weight:bold;">+ ₹${data.rounded} Spare Change Round-Up</span> applied!`;
+             }
+             await Swal.fire({
+                title: "Wealth Engine Triggered!",
+                html: msg,
+                icon: "success",
+                background: '#12121e',
+                color: '#fff',
+                confirmButtonColor: '#10b981'
+             });
+        }
         window.location.href = 'index.html';
     } else {
         // User changed their mind - trigger confetti for good behavior!
@@ -252,5 +300,9 @@
     });
   });
 </script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/annyang/2.6.1/annyang.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="global-voice.js"></script>
 </body>
 </html>

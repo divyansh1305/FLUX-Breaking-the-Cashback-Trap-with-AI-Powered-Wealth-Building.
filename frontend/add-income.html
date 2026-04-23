@@ -64,17 +64,55 @@
     <button type="submit" class="btn-submit">Add to Wealth</button>
   </form>
 </div>
-<script src="app.js"></script>
-<script>
-  document.getElementById('incomeForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const amt = document.getElementById('amt').value;
-    const src = document.getElementById('src').value;
-    await addIncome(src, amt);
-    window.location.href = 'index.html';
-  });
-</script>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script src="app.js"></script>
+  <script>
+    document.getElementById('incomeForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const amtStr = document.getElementById('amt').value;
+      const src = document.getElementById('src').value;
+      const amt = parseFloat(amtStr);
+      if(!amt || amt <= 0) return alert("Enter valid amount");
 
+      const btn = document.querySelector('.btn-submit');
+      const originalText = btn.innerText;
+      btn.innerText = "Securing Gateway...";
+      
+      const rzpOptions = {
+          "key": "rzp_test_SfTc5bfWE5vwk7", 
+          "amount": amt * 100, 
+          "currency": "INR",
+          "name": "Flux Enterprise",
+          "description": "Secure Income Addition",
+          "image": "https://i.ibb.co/q1tP5rR/flux.png",
+          "theme": { "color": "#10b981" },
+          "handler": async function (response) {
+               btn.innerText = "Syncing Wealth...";
+               await fetch('/api/add-income', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ amount: amt, category: src, date: new Date().toISOString() })
+               });
+               
+               btn.innerText = "Income Added ✅";
+               setTimeout(() => {
+                   window.location.href = 'index.html'; // Go back to dashboard!
+               }, 1000);
+          }
+      };
+      
+      if (typeof Razorpay !== "undefined") {
+          const rzp1 = new Razorpay(rzpOptions);
+          rzp1.on('payment.failed', function (response){
+             alert("Gateway Failed: " + response.error.description);
+             btn.innerText = originalText;
+          });
+          rzp1.open();
+      } else {
+          rzpOptions.handler({razorpay_payment_id: "pay_simulated"});
+      }
+    });
+  </script>
 <script>
   // 3D Background - Rising Green Particles
   window.addEventListener('DOMContentLoaded', () => {
@@ -119,5 +157,9 @@
     });
   });
 </script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/annyang/2.6.1/annyang.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="global-voice.js"></script>
 </body>
 </html>

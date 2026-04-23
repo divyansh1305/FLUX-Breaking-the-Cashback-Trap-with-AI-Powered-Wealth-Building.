@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Flux OS - Master Terminal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="global-voice.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #05050A; --bg2: #0a0a14; --card: #12121e; --card-glass: rgba(18,18,30,0.7);
+      --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.12);
+      --white: #ffffff; --gray: #8888aa;
+      --orange: #f59e0b; --red: #ef4444; --magenta: #ec4899;
+      --purple: #9b79e0; --blue: #3b82f6; --green2: #34d399;
+    }
+    body { background:var(--bg); color:var(--white); font-family:'Inter', sans-serif; overflow-x:hidden; min-height:100vh; }
+    
+    .navbar {
+      position:fixed; top:20px; left:50%; transform:translateX(-50%); width:90%; max-width:1200px;
+      background:rgba(10,10,15,0.8); backdrop-filter:blur(24px); border:1px solid var(--border); border-radius:100px;
+      padding:12px 24px; display:flex; justify-content:space-between; align-items:center; z-index:1000;
+    }
+    .nav-logo { font-weight:900; font-size:20px; letter-spacing:-1px; display:flex; align-items:center; gap:8px; color:white; text-decoration:none; }
+    .nav-logo-icon { width:28px; height:28px; background:linear-gradient(135deg, var(--orange), #fcd34d); border-radius:8px; display:flex; align-items:center; justify-content:center; box-shadow:0 0 15px rgba(245,158,11,0.25); color:#000; }
+    .nav-links { display:flex; gap:8px; }
+    .nav-link { color:var(--gray); text-decoration:none; font-size:13px; font-weight:600; padding:8px 16px; border-radius:100px; transition:0.2s; }
+    .nav-link:hover, .nav-link.active { color:var(--white); background:rgba(255,255,255,0.08); }
+    
+    .main { max-width:1200px; margin:0 auto; padding:120px 24px 60px; display:flex; flex-direction:column; gap:40px; }
+
+    /* CORE HERO - MASTER METRICS */
+    .hero-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 24px; }
+    .master-card { background: linear-gradient(135deg, var(--card), var(--bg2)); border: 1px solid var(--border2); border-radius: 32px; padding: 40px; position:relative; overflow:hidden; box-shadow: 0 40px 100px rgba(0,0,0,0.5); }
+    .master-card::before { content:''; position:absolute; top:0; left:0; width:100%; height:4px; background:linear-gradient(90deg, var(--blue), var(--purple), var(--orange)); }
+    .m-title { font-size: 14px; font-weight: 800; color: var(--gray); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+    .m-val { font-size: 64px; font-weight: 900; letter-spacing: -3px; color: white; display:flex; align-items:baseline; gap:12px; }
+    .m-val small { font-size: 20px; color: var(--green2); font-weight: 700; letter-spacing: 0; }
+    
+    /* 4-PILLAR GRID */
+    .pillar-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+    @media(max-width:1000px) { .pillar-grid { grid-template-columns: repeat(2, 1fr); } .hero-grid { grid-template-columns: 1fr; } }
+    @media(max-width:600px) { .pillar-grid { grid-template-columns: 1fr; } }
+
+    .pillar-card { background: var(--card-glass); backdrop-filter:blur(16px); border: 1px solid var(--border); border-radius: 24px; padding: 24px; transition: 0.3s; display:flex; flex-direction:column; justify-content:space-between; }
+    .pillar-card:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+    .p-icon { width:48px; height:48px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:24px; margin-bottom:16px; }
+    .p-val { font-size: 32px; font-weight: 900; letter-spacing: -1px; margin: 12px 0 8px; }
+
+    /* WHY US / ANALYSIS SECTION */
+    .analysis-table { width: 100%; border-collapse: collapse; margin-top: 24px; }
+    .analysis-table th, .analysis-table td { padding: 20px; text-align: left; border-bottom: 1px solid var(--border); }
+    .analysis-table th { font-size: 12px; font-weight: 800; color: var(--gray); text-transform: uppercase; letter-spacing: 1.5px; }
+    .analysis-table td { font-size: 15px; font-weight: 600; }
+    
+    .btn-sys { background: linear-gradient(135deg, var(--blue), #2563eb); border: none; color: white; padding: 8px 16px; border-radius: 12px; font-size: 12px; font-weight: 800; cursor: pointer; display: inline-flex; align-items:center; gap:6px; text-decoration:none; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="nav-logo"><div class="nav-logo-icon">⚡</div>FLUX</a>
+  <div class="nav-links">
+    <a href="dashboard.html" class="nav-link active">AI Engine</a>
+    <a href="insurance.html" class="nav-link">Insurance</a>
+    <a href="markets.html" class="nav-link">Markets</a>
+    <a href="payments.html" class="nav-link">Pay/Wallet</a>
+  </div>
+  <div style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); font-size:11px; padding:4px 12px; border-radius:100px; font-weight:700;">LIVE TERMINAL</div>
+</nav>
+
+<div class="main">
+  <!-- LEVEL 1: MASTER OVERVIEW -->
+  <div class="hero-grid">
+    <div class="master-card">
+      <div class="m-title">Total Fluid Managed by FLUX</div>
+      <div class="m-val">₹5,12,040 <small>+₹42,300 Generative Returns</small></div>
+      <p style="color:var(--gray); font-size:15px; margin-top:16px; line-height:1.6;">Overview of all funds manipulated by Flux AI. Includes auto-invested salaries, intercepted insurance commissions, and behavioral spending optimizations routed into the market.</p>
+      
+      <div style="display:flex; gap:16px; margin-top:32px;">
+         <div style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.3); padding:16px; border-radius:16px; width:50%;">
+           <div style="font-size:12px; color:var(--green2); font-weight:700; text-transform:uppercase; margin-bottom:4px;">1YR Wealth Projection</div>
+           <div style="font-size:24px; font-weight:900; color:white;">₹12,45,000</div>
+         </div>
+         <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); padding:16px; border-radius:16px; width:50%;">
+           <div style="font-size:12px; color:var(--red); font-weight:700; text-transform:uppercase; margin-bottom:4px;">Avoided Losses via AI</div>
+           <div style="font-size:24px; font-weight:900; color:white;">₹1,18,000</div>
+         </div>
+      </div>
+    </div>
+    
+    <div class="master-card" style="padding:24px;">
+       <canvas id="projectionChart" height="250"></canvas>
+    </div>
+  </div>
+
+  <div style="width:100%; height:1px; background:var(--border);"></div>
+
+  <!-- LEVEL 2: THE 4 PILLARS (SEGMENTED ANALYSIS) -->
+  <div>
+    <h2 style="font-size:28px; font-weight:900; letter-spacing:-1px; margin-bottom:8px;">Segmented Engine Analytics</h2>
+    <p style="color:var(--gray); font-size:14px; margin-bottom:24px;">Breakdown of exactly how FLUX extracts wealth across 4 core verticals.</p>
+    
+    <div class="pillar-grid">
+      <!-- 1. SALARY TRIGGER -->
+      <div class="pillar-card" style="border-top:4px solid var(--purple);">
+        <div>
+          <div class="p-icon" style="background:rgba(155,121,224,0.15); color:var(--purple);">🧠</div>
+          <div style="font-size:14px; font-weight:800; color:var(--gray);">1. SMART SALARY ENGINE</div>
+          <div class="p-val" style="color:white;">₹1,20,000</div>
+          <div style="font-size:12px; color:var(--green2); font-weight:700; margin-bottom:12px;">20% Swept Instantly</div>
+          <p style="font-size:13px; color:rgba(255,255,255,0.6); line-height:1.5;">Flux detects salary credits and instantly locks 20% into index funds before the user gets a chance to spend it.</p>
+        </div>
+        <div style="margin-top:20px;">
+          <a href="smart-analyzer.html" class="btn-sys">View Statement AI</a>
+        </div>
+      </div>
+
+      <!-- 2. REVERSE UPI -->
+      <div class="pillar-card" style="border-top:4px solid var(--orange);">
+        <div>
+          <div class="p-icon" style="background:rgba(245,158,11,0.15); color:var(--orange);">💸</div>
+          <div style="font-size:14px; font-weight:800; color:var(--gray);">2. FLUX PAY (REVERSE UPI)</div>
+          <div class="p-val" style="color:white;">₹4,200</div>
+          <div style="font-size:12px; color:var(--orange); font-weight:700; margin-bottom:12px;">Saved this month</div>
+          <p style="font-size:13px; color:rgba(255,255,255,0.6); line-height:1.5;">Interrupts bad financial habits at checkout. Blocks impulsive spends and routes the friction money directly to investments.</p>
+        </div>
+        <div style="margin-top:20px;">
+          <a href="payments.html" class="btn-sys" style="background:var(--orange); color:#000;">Test Reverse UPI</a>
+        </div>
+      </div>
+
+      <!-- 3. INSURANCE EXTRACTOR -->
+      <div class="pillar-card" style="border-top:4px solid var(--magenta);">
+        <div>
+          <div class="p-icon" style="background:rgba(236,72,153,0.15); color:var(--magenta);">🛡️</div>
+          <div style="font-size:14px; font-weight:800; color:var(--gray);">3. INSURANCE INTERCEPT</div>
+          <div class="p-val" style="color:white;">₹12,400</div>
+          <div style="font-size:12px; color:var(--magenta); font-weight:700; margin-bottom:12px;">30% Hidden Broker Comm.</div>
+          <p style="font-size:13px; color:rgba(255,255,255,0.6); line-height:1.5;">Strips the massive hidden commissions given to traditional brokers or given back as fake "rewards," and converts it to pure ETFs.</p>
+        </div>
+        <div style="margin-top:20px;">
+          <a href="insurance.html" class="btn-sys" style="background:var(--magenta); color:#fff;">View Insurance Engine</a>
+        </div>
+      </div>
+
+      <!-- 4. LIVE MARKETS -->
+      <div class="pillar-card" style="border-top:4px solid var(--green2);">
+        <div>
+          <div class="p-icon" style="background:rgba(52,211,153,0.15); color:var(--green2);">📈</div>
+          <div style="font-size:14px; font-weight:800; color:var(--gray);">4. MARKETS (SHOONYA LIVE)</div>
+          <div class="p-val" style="color:white;">+₹42,300</div>
+          <div style="font-size:12px; color:var(--green2); font-weight:700; margin-bottom:12px;">Total P&L Generated</div>
+          <p style="font-size:13px; color:rgba(255,255,255,0.6); line-height:1.5;">All intercepted money across the network automatically lands in the Groww/Shoonya API and compounds.</p>
+        </div>
+        <div style="margin-top:20px;">
+          <a href="markets.html" class="btn-sys" style="background:var(--green2); color:#000;">View Live Portfolio</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEVEL 3: WHY US (THE MIC DROP EXPLANATION) -->
+  <div style="margin-top:24px;">
+    <div style="background: linear-gradient(180deg, var(--card), var(--bg2)); border: 1px solid var(--border); border-radius: 32px; padding: 40px;">
+      <h2 style="font-size:32px; font-weight:900; letter-spacing:-1px; text-align:center; margin-bottom:16px;">Why FLUX Destroys the Competition</h2>
+      <p style="color:var(--gray); font-size:16px; text-align:center; max-width:800px; margin: 0 auto 40px; line-height:1.6;">Traditional fintechs depend on keeping users broke. Flux generates its valuation by making its users fundamentally richer through automation.</p>
+      
+      <table class="analysis-table">
+        <thead>
+          <tr>
+            <th>The Feature</th>
+            <th style="color:#ef4444;">Standard Apps (Paytm, Cred)</th>
+            <th style="color:var(--green2);">Flux Wealth OS</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>The Motivation Hook</td>
+            <td style="color:rgba(255,255,255,0.6);">Gamification & Gambling (Spin the wheel for ₹5)</td>
+            <td style="color:white;">Loss Aversion Psychology (Real wealth saved)</td>
+          </tr>
+          <tr>
+            <td>Cashback Mechanics</td>
+            <td style="color:rgba(255,255,255,0.6);">Encourages you to spend more to earn 1% back</td>
+            <td style="color:white;">Intercepts bad spending BEFORE it happens</td>
+          </tr>
+          <tr>
+            <td>Insurance Business Model</td>
+            <td style="color:rgba(255,255,255,0.6);">Hides 30% broker commission & takes the profit</td>
+            <td style="color:white;">Passes the 30% commission back to the user via ETFs</td>
+          </tr>
+          <tr>
+            <td>The End Result</td>
+            <td style="color:rgba(255,255,255,0.6);">User owns ₹2000 in expiring coupon points</td>
+            <td style="color:white;">User owns compounding Gold & Nifty 50 Assets</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+     // Animate Cards
+     gsap.from('.master-card', {y: 30, opacity: 0, duration: 0.6, stagger: 0.2});
+     gsap.from('.pillar-card', {y: 30, opacity: 0, duration: 0.6, stagger: 0.1, delay: 0.4});
+     
+     // Render Chart
+     const ctx = document.getElementById('projectionChart').getContext('2d');
+     new Chart(ctx, {
+         type: 'line',
+         data: {
+             labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+             datasets: [{
+                 label: 'Without FLUX',
+                 data: [100, 110, 105, 120, 115, 125],
+                 borderColor: '#ef4444',
+                 backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                 tension: 0.4,
+                 fill: true
+             }, {
+                 label: 'With FLUX Autopilot',
+                 data: [100, 160, 240, 310, 420, 512],
+                 borderColor: '#34d399',
+                 backgroundColor: 'rgba(52, 211, 153, 0.2)',
+                 tension: 0.4,
+                 fill: true
+             }]
+         },
+         options: {
+             responsive: true,
+             maintainAspectRatio: false,
+             plugins: {
+                 legend: { labels: { color: '#8888aa', font: { family: 'Inter', size: 11, weight: 'bold' } } }
+             },
+             scales: {
+                 y: { display: false },
+                 x: { ticks: { color: '#8888aa', font: { family: 'Inter', size: 10 } }, grid: { display:false } }
+             }
+         }
+     });
+     
+     if(window.GhostAI) {
+         setTimeout(() => {
+             window.GhostAI.speak("Welcome to the Master Terminal. Analyzing overall network wealth operations across all connected modules.");
+         }, 1000);
+     }
+  });
+</script>
+
+</body>
+</html>

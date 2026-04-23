@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Legacy Vault - Flux</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="global-voice.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #030305; --card: #0a0a0f; --card2: #12121e;
+      --border: rgba(255,255,255,0.05); --border2: rgba(255,255,255,0.1);
+      --white: #ffffff; --gray: #8888aa; --gold: #fbbf24;
+    }
+    body { background:var(--bg); color:var(--white); font-family:'Inter', sans-serif; overflow-x:hidden; min-height:100vh; }
+    
+    .navbar {
+      position:fixed; top:18px; left:50%; transform:translateX(-50%); width:calc(100% - 40px); max-width:1280px;
+      background:rgba(5,5,10,0.82); backdrop-filter:blur(20px); border:1px solid var(--border2); border-radius:28px;
+      padding:0 26px; height:68px; display:flex; align-items:center; justify-content:space-between; z-index:1000;
+    }
+    .nav-brand { display:flex; align-items:center; gap:12px; text-decoration:none; color: white; }
+    .nav-logo { width:38px; height:38px; border-radius:14px; background:linear-gradient(135deg,#000,var(--gold)); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:20px; box-shadow:0 0 18px rgba(251,191,36,0.3); border:1px solid #fbbf24;}
+
+    .main { max-width:900px; margin:0 auto; padding:150px 24px 60px; text-align:center; }
+    
+    .hero-title { font-size: 56px; font-weight:900; letter-spacing:-2px; margin-bottom:16px; color: var(--gold); text-shadow: 0 0 40px rgba(251,191,36,0.2); }
+    .hero-subtitle { color: var(--gray); font-size: 16px; margin-bottom: 50px; line-height:1.6; max-width:600px; margin-left:auto; margin-right:auto; }
+    
+    .vault-container { background: var(--card); border: 1px solid var(--border); border-radius: 32px; padding: 50px; position:relative; overflow:hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
+    .vault-container::before { content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:200px; height:2px; background:radial-gradient(circle, var(--gold) 0%, transparent 100%); }
+
+    .pulse-ring { width: 120px; height: 120px; border-radius: 50%; background: rgba(251,191,36,0.05); border: 1px solid rgba(251,191,36,0.2); margin: 0 auto 30px; display:flex; align-items:center; justify-content:center; position:relative; }
+    .pulse-ring::after { content:''; position:absolute; width:100%; height:100%; border-radius:50%; border:1px solid rgba(251,191,36,0.5); animation: pulse 2s infinite; }
+    @keyframes pulse { 0% { transform:scale(1); opacity:1;} 100% { transform:scale(1.5); opacity:0;} }
+    
+    .status-text { font-size: 24px; font-weight: 800; color: white; margin-bottom: 8px; }
+    .status-sub { color: var(--gray); font-size: 14px; margin-bottom: 40px; }
+
+    .nominee-box { background: var(--card2); border: 1px dashed var(--border2); padding: 20px; border-radius: 16px; display:flex; align-items:center; justify-content:space-between; text-align:left; max-width:500px; margin:0 auto; }
+    .n-avatar { width:48px; height:48px; background:rgba(251,191,36,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--gold); font-size:20px; }
+
+    .btn-ping { background: transparent; border: 1px solid var(--gold); color: var(--gold); padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s; margin-top: 40px; }
+    .btn-ping:hover { background: var(--gold); color: #000; box-shadow: 0 0 20px rgba(251,191,36,0.3); }
+
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div style="display:flex; align-items:center; gap: 20px;">
+      <a href="dashboard.html" class="nav-brand">
+        <div class="nav-logo">🏛️</div>
+        <div style="font-weight:700; font-size:20px; color:#fbbf24;">Flux Legacy</div>
+      </a>
+  </div>
+  <a href="dashboard.html" style="color:var(--gray); text-decoration:none; font-weight:600; font-size:14px;">Back to Dashboard ➔</a>
+</nav>
+
+<div class="main">
+  <h1 class="hero-title">Zero-Loss Estate Plan</h1>
+  <p class="hero-subtitle">Billions of dollars are lost in unclaimed assets due to a lack of proper estate planning. Flux securely passes on your wealth map to your trusted nominee if you go silent.</p>
+
+  <div class="vault-container">
+    <div class="pulse-ring">
+      <span style="font-size:40px;">❤️</span>
+    </div>
+    <div class="status-text">Proof of Life: <span style="color:#34d399;">Active</span></div>
+    <div class="status-sub">Last pinged: Just now (via Login)</div>
+    
+    <div style="font-size:12px; color:var(--gray); text-transform:uppercase; letter-spacing:2px; margin-bottom:12px;">Primary Nominee & Smart Contract</div>
+    <div class="nominee-box">
+      <div style="display:flex; align-items:center; gap:16px;">
+        <div class="n-avatar">A</div>
+        <div>
+          <div style="font-weight:700; color:white; font-size:16px;">Aarav B. (Brother)</div>
+          <div style="font-size:12px; color:var(--gray); margin-top:4px;">Will trigger after 180 days of inactivity</div>
+        </div>
+      </div>
+      <div style="font-size:12px; color:#fbbf24; font-weight:600; padding:6px 12px; background:rgba(251,191,36,0.1); border-radius:20px;">
+        Contract Armed
+      </div>
+    </div>
+    
+    <button class="btn-ping" onclick="pingContract(this)">Manually Ping Contract</button>
+  </div>
+</div>
+
+<script>
+  async function pingContract(btn) {
+      btn.innerText = "Verifying Proof of Life...";
+      btn.disabled = true;
+      
+      try {
+          const res = await fetch('/api/legacy/ping', { method: 'POST' });
+          const data = await res.json();
+          
+          if(data.success) {
+              if(window.GhostAI && window.GhostAI.speak) {
+                  window.GhostAI.speak("Proof of life confirmed. Your smart contract timer has been reset to 180 days.");
+              }
+              btn.innerText = "Confirmed ✅";
+              btn.style.background = "#fbbf24";
+              btn.style.color = "#000";
+              
+              // Ensure gsap is loaded before calling it
+              if (typeof gsap !== 'undefined') {
+                  gsap.fromTo(btn, {scale:1.1}, {scale:1, duration:0.3});
+              }
+          } else {
+              btn.innerText = "Network Error - Try Again";
+              btn.disabled = false;
+          }
+      } catch(e) {
+          btn.innerText = "Error Pinging Vault";
+          btn.disabled = false;
+      }
+  }
+</script>
+<script src="app.js"></script>
+</body>
+</html>

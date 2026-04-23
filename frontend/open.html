@@ -352,14 +352,34 @@
       // 5) icons fly in from edges
       await flyInIcons();
       
-      // 6) short pause for user absorption, then collapse and redirect
-      await wait(1500);
-      
-      // 7) collapse question stage + immediate redirect to index.html
-      await collapseAndRedirect();
-    }
+    // 6) short pause for user absorption, then collapse and redirect
+    await wait(1500);
     
-    window.addEventListener('resize', () => { setTimeout(handleResize, 80); });
+    // 7) collapse question stage + immediate redirect to index.html
+    await collapseAndRedirect();
+  }
+
+  // --- GHOST AI LAUNCH GREETING ---
+  let voiceTriggered = false;
+  const launchGreet = () => {
+      if(voiceTriggered) return;
+      voiceTriggered = true;
+      const utterance = new SpeechSynthesisUtterance("I am Flux AI. Your autonomous wealth agent. Log in to synchronize your neural portfolio.");
+      const voices = window.speechSynthesis.getVoices();
+      let chosenVoice = voices.find(v => v.name.includes("Samantha") || v.name.includes("Daniel") || v.name.includes("Google US English"));
+      if (!chosenVoice) chosenVoice = voices.find(v => v.lang.startsWith("en-US"));
+      if (chosenVoice) utterance.voice = chosenVoice;
+      utterance.rate = 0.95;
+      utterance.pitch = 0.9;
+      window.speechSynthesis.speak(utterance);
+      // Clean up
+      document.removeEventListener('click', launchGreet);
+  };
+  document.addEventListener('click', launchGreet);
+  // Also try on voice load
+  window.speechSynthesis.onvoiceschanged = () => { if(!voiceTriggered) launchGreet(); };
+
+  window.addEventListener('resize', () => { setTimeout(handleResize, 80); });
     startExperience().catch(err => {
       console.warn(err);
       // fallback: ensure redirect even on unexpected error
@@ -367,6 +387,10 @@
     });
   })();
 </script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/annyang/2.6.1/annyang.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="global-voice.js"></script>
 </body>
 </html>
 </html>

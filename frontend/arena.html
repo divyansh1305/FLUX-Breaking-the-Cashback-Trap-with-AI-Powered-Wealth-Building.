@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Flux Arena - Gamified Wealth Engine</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #06060c;
+      --card: rgba(18, 18, 30, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent: #f59e0b;
+      --accent-glow: rgba(245, 158, 11, 0.4);
+      --text: #ffffff;
+      --text-dim: #8888aa;
+      --coin: #ffd700;
+      --glass: rgba(255, 255, 255, 0.03);
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { 
+      background: var(--bg); 
+      color: var(--text); 
+      font-family: 'Outfit', sans-serif; 
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* Background Ambient Glows */
+    .glow {
+      position: fixed;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      filter: blur(80px);
+      z-index: -1;
+      opacity: 0.3;
+      pointer-events: none;
+    }
+    .glow-1 { top: -200px; right: -200px; }
+    .glow-2 { bottom: -200px; left: -200px; }
+
+    /* Navbar */
+    .navbar {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      width: calc(100% - 40px); max-width: 1200px;
+      background: rgba(10, 10, 18, 0.8); backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border); border-radius: 20px;
+      padding: 0 24px; height: 70px;
+      display: flex; align-items: center; justify-content: space-between;
+      z-index: 1000;
+    }
+    .nav-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: white; }
+    .nav-logo { font-size: 24px; }
+    .nav-links { display: flex; gap: 8px; }
+    .nav-link { 
+      color: var(--text-dim); text-decoration: none; font-size: 14px; font-weight: 500;
+      padding: 8px 16px; border-radius: 12px; transition: 0.3s;
+    }
+    .nav-link:hover, .nav-link.active { color: white; background: var(--glass); }
+
+    .coin-display {
+      background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.2);
+      padding: 8px 18px; border-radius: 24px; display: flex; align-items: center; gap: 8px;
+      font-weight: 800; color: var(--coin); cursor: pointer; transition: 0.3s;
+    }
+    .coin-display:hover { transform: scale(1.1); box-shadow: 0 0 20px rgba(255, 215, 0, 0.2); }
+    .coin-update-anim { animation: coinPop 0.5s ease; }
+    @keyframes coinPop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.3); color: white; }
+      100% { transform: scale(1); }
+    }
+    
+    .status-pill {
+        display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+        background: rgba(255,255,255,0.05); border-radius: 100px; font-size: 11px;
+        font-weight: 700; color: var(--text-dim); text-transform: uppercase;
+    }
+
+    /* Main Content */
+    .container { max-width: 1200px; margin: 120px auto 100px; padding: 0 20px; }
+    
+    .header { text-align: center; margin-bottom: 60px; }
+    .header h1 { 
+      font-size: 64px; font-weight: 900; letter-spacing: -2px; 
+      background: linear-gradient(to bottom, #fff, #888); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 12px; text-transform: uppercase;
+    }
+    .header p { color: var(--text-dim); font-size: 18px; max-width: 600px; margin: 0 auto; }
+
+    /* Arena Tabs */
+    .tabs { 
+      display: flex; gap: 12px; justify-content: center; margin-bottom: 40px; 
+      background: var(--glass); padding: 8px; border-radius: 20px; width: fit-content; margin-left: auto; margin-right: auto;
+    }
+    .tab-btn {
+      background: transparent; border: none; color: var(--text-dim); padding: 12px 24px;
+      font-weight: 600; cursor: pointer; border-radius: 12px; transition: 0.3s;
+    }
+    .tab-btn.active { background: white; color: black; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.5s ease; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Legendary Game Cards */
+    .game-card {
+      background: linear-gradient(135deg, rgba(30, 30, 50, 0.4), rgba(10, 10, 20, 0.8));
+      border: 1px solid var(--card-border); border-radius: 32px;
+      padding: 35px; transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+      position: relative; overflow: hidden; backdrop-filter: blur(20px);
+      cursor: pointer; transform-style: preserve-3d;
+    }
+    .game-card:hover { 
+      transform: translateY(-15px) rotateX(5deg) scale(1.02); 
+      border-color: var(--accent);
+      box-shadow: 0 20px 40px rgba(245, 158, 11, 0.2);
+    }
+    .game-card::after {
+      content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+      background: linear-gradient(45deg, transparent, rgba(255,255,255,0.05), transparent);
+      transform: rotate(45deg); transition: 0.8s; pointer-events: none;
+    }
+    .game-card:hover::after { left: 100%; }
+    
+    .game-card h3 { font-size: 32px; margin-bottom: 12px; font-weight: 900; letter-spacing: -1px; }
+    .game-card p { color: var(--text-dim); margin-bottom: 24px; font-size: 16px; min-height: 48px; }
+    
+    .btn-play {
+      width: 100%; padding: 18px; border-radius: 18px; border: none;
+      background: white; color: black; font-weight: 900; cursor: pointer; transition: 0.4s;
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .btn-play:hover { background: var(--accent); transform: scale(1.02); box-shadow: 0 0 20px var(--accent-glow); }
+
+    /* Leaderboard */
+    .leaderboard { background: var(--card); border: 1px solid var(--card-border); border-radius: 30px; padding: 20px; }
+    .lb-row {
+      display: grid; grid-template-columns: 80px 1fr 120px 120px; padding: 20px;
+      align-items: center; border-radius: 20px; transition: 0.3s;
+    }
+    .lb-row:hover { background: var(--glass); }
+    .lb-row.you { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); }
+    .lb-rank { font-size: 24px; font-weight: 900; color: var(--text-dim); }
+    .lb-user { display: flex; align-items: center; gap: 16px; }
+    .lb-avatar { 
+      width: 48px; height: 48px; border-radius: 16px; background: var(--glass);
+      display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 20px;
+    }
+    .lb-score { text-align: right; font-weight: 800; font-size: 20px; }
+    .lb-velocity { text-align: right; color: #10b981; font-weight: 700; }
+
+    /* Modal / Game Overlay */
+    .modal {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.95); z-index: 2000; display: none;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-content {
+      background: #0a0a14; border: 1px solid var(--card-border); border-radius: 30px;
+      width: 100%; max-width: 800px; position: relative; padding: 40px;
+      text-align: center; max-height: 90vh; overflow-y: auto;
+    }
+    .close-modal { position: absolute; top: 24px; right: 24px; color: white; font-size: 32px; cursor: pointer; }
+
+    /* Spin Wheel Styles */
+    .spin-container { position: relative; width: 280px; height: 280px; margin: 30px auto; }
+    #spin-wheel {
+      width: 100%; height: 100%; border-radius: 50%;
+      border: 8px solid var(--card-border);
+      background: conic-gradient(
+        #e8491d 0deg 72deg,
+        #7c5cbf 72deg 144deg,
+        #2563eb 144deg 216deg,
+        #10b981 216deg 288deg,
+        #f59e0b 288deg 360deg
+      );
+      transition: transform 4s cubic-bezier(0.1, 0, 0.2, 1);
+      box-shadow: 0 0 50px rgba(255,255,255,0.1);
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+    #spin-wheel::before {
+        content: "⚡"; font-size: 40px; position: absolute; z-index: 5;
+    }
+    .spin-pointer {
+      position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+      width: 0; height: 0; 
+      border-left: 15px solid transparent; border-right: 15px solid transparent;
+      border-top: 30px solid white; z-index: 10;
+    }
+
+    .lucky-calendar {
+        background: linear-gradient(135deg, rgba(37,99,235,0.1), transparent);
+        border: 1px solid rgba(37,99,235,0.2); border-radius: 24px;
+        padding: 24px; margin-top: 40px; display: flex; align-items: center; gap: 30px;
+    }
+    .cal-date {
+        background: white; color: black; padding: 10px; border-radius: 12px;
+        text-align: center; min-width: 80px;
+    }
+    .cal-day { font-size: 24px; font-weight: 900; line-height: 1; }
+    .cal-mon { font-size: 12px; font-weight: 700; text-transform: uppercase; }
+
+    /* Game UI Styles */
+    #game-canvas-container { 
+      background: #000; border-radius: 20px; margin: 20px auto; 
+      position: relative; overflow: hidden; width: 100%; max-width: 400px;
+      aspect-ratio: 1/1; border: 4px solid var(--glass);
+    }
+    .ttt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 300px; margin: 0 auto; }
+    .ttt-cell { 
+      height: 100px; background: var(--glass); border-radius: 15px; 
+      display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 900;
+      cursor: pointer; transition: 0.3s;
+    }
+    .ttt-cell:hover { background: rgba(255,255,255,0.1); }
+    
+    /* Spin Wheel */
+    .spin-container { position: relative; width: 300px; height: 300px; margin: 0 auto 40px; }
+    #spin-wheel { 
+      width: 100%; height: 100%; border-radius: 50%; border: 8px solid var(--card-border);
+      transition: transform 4s cubic-bezier(0.1, 0, 0.2, 1); background: conic-gradient(
+        #f59e0b 0deg 72deg, #12121e 72deg 144deg, 
+        #f59e0b 144deg 216deg, #12121e 216deg 288deg, 
+        #f59e0b 288deg 360deg
+      );
+    }
+    .spin-pointer { 
+      position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+      width: 30px; height: 30px; background: white; clip-path: polygon(50% 100%, 0 0, 100% 0); z-index: 10;
+    }
+
+    /* Store Cards */
+    .store-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+    .store-card {
+      background: var(--glass); border: 1px solid var(--card-border); border-radius: 24px;
+      padding: 30px; text-align: center;
+    }
+    .store-card.pro { border-color: var(--accent); background: linear-gradient(135deg, rgba(245,158,11,0.05), transparent); }
+    .store-card h4 { font-size: 24px; margin-bottom: 8px; }
+    .store-price { font-size: 32px; font-weight: 900; color: var(--accent); margin: 20px 0; }
+
+    /* Result Overlay */
+    .result-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.92); z-index: 3000; display: none;
+      align-items: center; justify-content: center; backdrop-filter: blur(10px);
+    }
+    .result-card {
+      background: #0d0d1a; border: 2px solid var(--accent); border-radius: 40px;
+      padding: 50px; width: 90%; max-width: 500px; text-align: center;
+      animation: bounceIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .result-emoji { font-size: 80px; margin-bottom: 20px; }
+    .result-title { font-size: 32px; font-weight: 900; margin-bottom: 10px; color: white; }
+    .result-msg { color: var(--text-dim); margin-bottom: 30px; font-size: 16px; line-height: 1.6; }
+    
+    @keyframes bounceIn {
+      0% { transform: scale(0.3); opacity: 0; }
+      50% { transform: scale(1.05); }
+      70% { transform: scale(0.9); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    @media (max-width: 768px) {
+      .header h1 { font-size: 42px; }
+      .lb-row { grid-template-columns: 1fr 1fr; gap: 12px; }
+      .lb-rank, .lb-velocity { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="glow glow-1"></div>
+<div class="glow glow-2"></div>
+
+<nav class="navbar">
+  <a href="index.html" class="nav-brand">
+    <div class="nav-logo">⚡</div>
+    <div style="font-weight:800; font-size:22px; letter-spacing:-1px;">FLUX</div>
+  </a>
+  <div class="nav-links">
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+    <a href="arena.html" class="nav-link active">Arena 🎮</a>
+    <a href="analytics_overview.html" class="nav-link">Analytics</a>
+  </div>
+  <div class="coin-display" onclick="switchTab('store')">
+    <span>🪙</span> <span id="global-coins">0</span>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="header">
+    <div class="game-badge" style="background:var(--accent); color:black;">PHASE 4: LIVE ECONOMY</div>
+    <h1>The Arena</h1>
+    <p>Battle the markets, play games, and unlock the ultimate Flux Pro tier using coins earned from algorithmic wealth growth.</p>
+    
+    <!-- Prestige Progress Bar -->
+    <div style="max-width:600px; margin:40px auto; background:rgba(255,255,255,0.03); border-radius:100px; padding:6px; border:1px solid var(--card-border);">
+        <div style="display:flex; justify-content:space-between; padding:0 20px; margin-bottom:8px; font-size:11px; font-weight:800; letter-spacing:1px; color:var(--text-dim);">
+            <span>AMATEUR TRADER</span>
+            <span style="color:var(--accent);">LEGENDARY STATUS</span>
+        </div>
+        <div style="height:12px; background:rgba(255,255,255,0.05); border-radius:100px; overflow:hidden;">
+            <div id="prestige-bar" style="width:15%; height:100%; background:linear-gradient(90deg, var(--accent), #fff); box-shadow: 0 0 20px var(--accent-glow); transition: 1s;"></div>
+        </div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('games')">Arcade</button>
+    <button class="tab-btn" onclick="switchTab('leaderboard')">Leaderboard</button>
+    <button class="tab-btn" onclick="switchTab('badges')">Showcase</button>
+    <button class="tab-btn" onclick="switchTab('store')">Store</button>
+  </div>
+
+  <!-- Arcade Tab -->
+  <div id="games" class="tab-content active">
+    <!-- Daily Discipline Map (NEW) -->
+    <div style="background:linear-gradient(135deg, rgba(8, 8, 20, 0.9), #050510); border:1px solid var(--card-border); border-radius:32px; padding:35px; margin-bottom:40px; position:relative; overflow:hidden;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
+            <div>
+                <h3 style="font-size:32px; font-weight:900;">Daily Discipline Map</h3>
+                <p style="color:var(--text-dim);">Maintain your streak to unlock the **Legendary High-Stakes Pulse**.</p>
+            </div>
+            <button class="btn-play" onclick="dailyCheckin()" style="width:auto; padding:15px 40px; background:var(--accent); color:black;" id="btn-checkin">CLAIM DAILY CREDIT</button>
+        </div>
+        <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:12px;" id="streak-map">
+            <!-- Populated by JS: Days 1-7 -->
+            <div class="status-pill" style="height:80px; flex-direction:column; justify-content:center; opacity:0.3;">
+                <span style="font-size:10px;">DAY 1</span>
+                <span style="font-size:24px;">🛡️</span>
+            </div>
+            <div class="status-pill" style="height:80px; flex-direction:column; justify-content:center; opacity:0.3;">
+                <span style="font-size:10px;">DAY 2</span>
+                <span style="font-size:24px;">🛡️</span>
+            </div>
+            <div class="status-pill" style="height:80px; flex-direction:column; justify-content:center; opacity:0.3;">
+                <span style="font-size:10px;">DAY 3</span>
+                <span style="font-size:24px;">🛡️</span>
+            </div>
+            <div class="status-pill" style="height:80px; flex-direction:column; justify-content:center; opacity:0.3; border:1px dashed var(--accent);">
+                <span style="font-size:10px;">DAY 4</span>
+                <span style="font-size:24px;">🔓</span>
+            </div>
+            <div class="status-pill" style="height:80px; flex-direction:column; justify-content:center; opacity:0.3;">
+                <span style="font-size:10px;">DAY 5</span>
+                <span style="font-size:24px;">🛡️</span>
+            </div>
+            <div class="status-pill" style="height:80px; flex-direction:column; justify-content:center; opacity:0.3;">
+                <span style="font-size:10px;">DAY 6</span>
+                <span style="font-size:24px;">🛡️</span>
+            </div>
+            <div class="status-pill" style="height:80px; flex-direction:column; justify-content:center; opacity:0.3; background:rgba(245,158,11,0.1);">
+                <span style="font-size:10px;">DAY 7</span>
+                <div style="font-size:18px; font-weight:900;">JACKPOT</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div style="display:flex; gap:16px; margin-bottom:30px; overflow-x:auto;">
+        <div style="background:var(--card); padding:15px 25px; border-radius:20px; border:1px solid var(--card-border); min-width:200px;">
+            <div style="font-size:11px; color:#10b981; font-weight:800; display:flex; align-items:center; gap:5px;">
+                <span style="width:6px; height:6px; background:#10b981; border-radius:50%; animation: pulse 1s infinite;"></span> LIVE MARKET STATUS
+            </div>
+            <div style="font-size:18px; font-weight:800; margin-top:5px;">BULLISH +2.4%</div>
+        </div>
+        <div style="background:var(--card); padding:15px 25px; border-radius:20px; border:1px solid var(--card-border); min-width:240px;">
+            <div style="font-size:11px; color:var(--text-dim); font-weight:800;">GLOBAL WINNERS</div>
+            <marquee style="font-size:14px; font-weight:600; margin-top:5px; color:var(--accent);">
+                Agent_X won AirPods Pro... User_99 earned iPhone 16... FluxMaster secured 30min CEO Session!
+            </marquee>
+        </div>
+    </div>
+
+    <!-- High Stakes Spin -->
+    <div class="game-card" id="spin-main-card" style="margin-bottom: 40px; background: radial-gradient(circle at top right, rgba(245,158,11,0.15), #0a0a14); border: 2px solid var(--accent);">
+      <div id="spin-lock-overlay" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); backdrop-filter:blur(10px); z-index:10; flex-direction:column; align-items:center; justify-content:center;">
+        <div style="font-size:40px; margin-bottom:12px;">🔒</div>
+        <div style="font-weight:900; font-size:22px; letter-spacing:1px;">RESTRICTED AREA</div>
+        <p style="font-size:13px; color:var(--text-dim); margin-top:8px; max-width:280px; text-align:center;">Reach **Level 3** (15 Day Streak) or go **PRO** to enter the High-Stakes Pulse.</p>
+        <button class="btn-play" style="width:auto; padding:10px 20px; margin-top:15px; font-size:12px;" onclick="document.getElementById('spin-showcase').scrollIntoView()">PREVIEW PRIZES</button>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:30px; position:relative; z-index:1;">
+        <div style="flex:1;">
+          <div class="game-badge" style="background:var(--accent); color:black;">LEGENDARY DROP</div>
+          <h3 style="font-size:48px; margin-bottom:10px;">The Lucky Pulse</h3>
+          <p style="font-size:18px;">Our highest value drop system. Secure the Boardroom session or a Lifetime Pro unlock with a single spin.</p>
+          
+          <!-- Rewards Preview (Scrollable) -->
+          <div id="spin-showcase" style="display:flex; gap:12px; margin:20px 0; overflow-x:auto; padding-bottom:10px;">
+              <div class="status-pill" style="border:1px solid #f59e0b; color:white;">📱 iPhone 16 Pro</div>
+              <div class="status-pill" style="border:1px solid #10b981; color:white;">💎 Lifetime Pro</div>
+              <div class="status-pill" style="border:1px solid #ef4444; color:white;">👔 CEO Session</div>
+              <div class="status-pill" style="border:1px solid #2563eb; color:white;">🛡️ 10,000 Credits</div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:15px; margin-top:15px;">
+            <button class="btn-play" id="main-spin-btn" onclick="openGame('spin')" style="width:250px; background:white; color:black; font-size:20px;">SPIN: 🛡️ 5,000</button>
+          </div>
+        </div>
+        <div id="spin-visual" style="width:200px; height:200px; background:var(--glass); border-radius:50%; display:flex; align-items:center; justify-content:center; border:3px solid var(--accent); box-shadow: 0 0 30px var(--accent-glow);">
+            <div style="font-size:80px; filter: drop-shadow(0 0 10px white);">🌀</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="games-grid">
+      <!-- Best Game Ever -->
+      <div class="game-card" onclick="openGame('marketrun')" style="grid-column: 1 / -1; background: linear-gradient(135deg, rgba(16,185,129,0.1), transparent); border-color: #10b981;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div class="game-badge" style="background:#10b981; color:white;">BEST GAME EVER</div>
+            <h3>Ghost Market Run</h3>
+            <p>Dodge the red volatility candles and collect the green profits. Surviving 60s wins a 10x multiplier!</p>
+            <button class="btn-play" style="width:200px; background:#10b981; color:white;">START RUN</button>
+          </div>
+          <div style="font-size:80px; opacity:0.3; transform:rotate(12deg);">📈</div>
+        </div>
+      </div>
+
+      <div class="game-card" onclick="openGame('ttt')">
+        <div class="game-badge">PVP AI</div>
+        <h3>Ghost Tic-Tac-Toe</h3>
+        <p>Beat the Flux Agent at traditional strategy. Win fixed rewards.</p>
+        <button class="btn-play">PLAY NOW</button>
+      </div>
+
+      <div class="game-card" onclick="openGame('flappy')">
+        <div class="game-badge">NEVERENDING</div>
+        <h3>Wealth Flight</h3>
+        <p>Navigate the volatility as the market index. Earn coins based on your score.</p>
+        <button class="btn-play">LAUNCH</button>
+      </div>
+    </div>
+
+    <!-- Elite Lucky Draw -->
+    <div class="game-card" style="margin-bottom: 30px; background: linear-gradient(135deg, rgba(37,99,235,0.15), #0a0a14); border: 2px solid #2563eb; position: relative; overflow: hidden;">
+      <div style="position:absolute; top:-20px; right:-20px; font-size:100px; opacity:0.05;">🎟️</div>
+      <div style="display:flex; justify-content:space-between; align-items:center; position:relative; z-index:1; flex-wrap:wrap; gap:20px;">
+        <div style="flex:1;">
+          <div class="game-badge" style="background:#2563eb; color:white;">ELITE GIVEAWAY</div>
+          <h3 style="font-size:32px;">Master Wealthy Lucky Draw</h3>
+          <p style="font-size:16px;">The ultimate random drop. Every 7th, one elite trader steps into the 30k Boardroom pool.</p>
+          
+          <!-- Lucky Draw Loot Pool -->
+          <div style="display:flex; gap:10px; margin-top:20px;">
+              <div class="status-pill" style="background:rgba(37,99,235,0.2); color:white; border:1px solid rgba(37,99,235,0.4);">🎯 30,000 Credits</div>
+              <div class="status-pill" style="background:rgba(37,99,235,0.2); color:white; border:1px solid rgba(37,99,235,0.4);">🎮 PS5 Digital</div>
+              <div class="status-pill" style="background:rgba(37,99,235,0.2); color:white; border:1px solid rgba(37,99,235,0.4);">🎧 AirPods Max</div>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:28px; font-weight:900; color:white; margin-bottom:10px;">🛡️ 7,500</div>
+          <button class="btn-play" onclick="buyLuckyDraw()" style="background:#2563eb; color:white; padding:16px 40px; font-size:16px;">SECURE ENTRY</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaderboard Tab -->
+  <div id="leaderboard" class="tab-content">
+    <div class="leaderboard" id="lb-container">
+      <div class="lb-row" style="color:var(--text-dim); font-size:12px; font-weight:700; text-transform:uppercase;">
+        <div>Rank</div>
+        <div>Agent Profile</div>
+        <div style="text-align:right;">Wealth Score</div>
+        <div style="text-align:right;">Status</div>
+      </div>
+      <div id="lb-body">
+        <!-- Dynamic Leaderboard -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Badges Tab -->
+  <div id="badges" class="tab-content">
+    <div class="games-grid" id="badges-grid">
+      <!-- Dynamic Badges -->
+    </div>
+  </div>
+
+  <!-- Enhanced Store Tab (FIXED STRUCTURE) -->
+  <div id="store" class="tab-content">
+    <!-- Status Bar -->
+    <div style="display:flex; gap:16px; margin-bottom:30px; overflow-x:auto;">
+        <div style="background:var(--card); padding:15px; border-radius:20px; border:1px solid var(--card-border); min-width:200px;">
+            <div style="font-size:11px; color:#10b981; font-weight:800;">VAULT STATUS</div>
+            <div style="font-size:18px; font-weight:800; margin-top:5px;">SECURED ✅</div>
+        </div>
+        <div style="background:var(--card); padding:15px; border-radius:20px; border:1px solid var(--card-border); min-width:200px;">
+            <div style="font-size:11px; color:var(--accent); font-weight:800;">ELITE POOL</div>
+            <div style="font-size:18px; font-weight:800; margin-top:5px;">₹7,50,000+</div>
+        </div>
+    </div>
+
+    <div class="game-card" style="margin-bottom: 30px; background: linear-gradient(135deg, rgba(37,99,235,0.15), #0a0a14); border: 2px solid #2563eb; position: relative; overflow: hidden;">
+      <div style="position:absolute; top:-20px; right:-20px; font-size:100px; opacity:0.05;">🎟️</div>
+      <div style="display:flex; justify-content:space-between; align-items:center; position:relative; z-index:1;">
+        <div>
+          <div class="game-badge" style="background:#2563eb; color:white;">ELITE GIVEAWAY</div>
+          <h3 style="font-size:32px;">Master Wealthy Lucky Draw</h3>
+          <p style="font-size:16px;">Stand a chance to win a **₹100,000 Jackpot Equivalent** on the 7th! AI-verified neutrality.</p>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:28px; font-weight:900; color:white; margin-bottom:10px;">🛡️ 7,500</div>
+          <button class="btn-play" onclick="buyLuckyDraw()" style="background:#2563eb; color:white; padding:16px 40px; font-size:16px;">SECURE ENTRY</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="store-grid">
+      <div class="store-card pro" style="background: linear-gradient(135deg, rgba(16,185,129,0.1), transparent); border-color:#10b981;">
+        <div class="game-badge" style="background:#10b981; color:white;">MOST VALUABLE</div>
+        <h4>Flux Pro: Lifetime</h4>
+        <p>Access all Phase 4 & 5 features forever. No more renewals.</p>
+        <div class="store-price">🛡️ 15,000</div>
+        <button class="btn-play" style="background:#10b981; color:white;" onclick="redeemPro(9999)">BUY LIFETIME</button>
+      </div>
+      <div class="store-card">
+        <h4>Custom AI Voice</h4>
+        <p>Personalize your Ghost AI's auditory profile.</p>
+        <div class="store-price">🛡️ 3,500</div>
+        <button class="btn-play">SELECT VOICE</button>
+      </div>
+    </div>
+
+    <!-- Elite Locked Section -->
+    <div style="margin-top: 60px; position: relative;">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:30px;">
+         <div style="width:40px; height:40px; background:var(--accent); border-radius:12px; display:flex; align-items:center; justify-content:center; color:black;">🔒</div>
+         <h3 style="font-size:32px; font-weight:900; letter-spacing:-1px;">ELITE ACCESS VAULT</h3>
+      </div>
+      <div class="store-grid">
+         <div class="store-card" style="border: 2px solid var(--accent); background: linear-gradient(135deg, rgba(245,158,11,0.15), #0a0a14); position: relative; overflow: hidden; padding: 50px 30px;">
+            <div style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); z-index:2; display:flex; align-items:center; justify-content:center; flex-direction:column;">
+               <div style="font-size:40px; margin-bottom:15px;">💎</div>
+               <div style="font-weight:900; font-size:18px; color:var(--accent); text-transform:uppercase; letter-spacing:2px;">LEGENDARY STATUS REQUIRED</div>
+            </div>
+            <div class="game-badge" style="background:linear-gradient(90deg, #f59e0b, #e8491d); color:white; padding:8px 20px;">BOARDROOM ACCESS</div>
+            <h4 style="font-size:32px; margin:15px 0;">Strategy Session</h4>
+            <p style="font-size:16px; color:var(--text-dim);">30-min Private 1-on-1 with Flux CEO & Lead Architect. Influence the roadmap.</p>
+            <div class="store-price" style="font-size:48px;">🛡️ 30,000</div>
+            <button class="btn-play" style="background:var(--accent); color:black;" onclick="unlockCEO()">SECURE BOARDROOM SESSION</button>
+         </div>
+      </div>
+    </div>
+
+    <!-- Gift Inventory -->
+    <div style="margin-top: 60px; background: rgba(255,255,255,0.02); border: 1px dashed var(--card-border); border-radius: 40px; padding: 40px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 30px;">
+        <div>
+          <h3 style="font-size:32px; font-weight:900;">🎁 Global Vault</h3>
+          <p style="color:var(--text-dim);">Unclaimed physical gifts and asset drops from the High-Stakes Pulse.</p>
+        </div>
+        <button class="btn-play" style="width:auto; padding:12px 30px; background:var(--glass); color:white; font-size:12px;">VIEW LOGS</button>
+      </div>
+      <div id="gift-inventory" style="display:flex; gap:20px; flex-wrap:wrap; justify-content:center;">
+        <div style="color:var(--text-dim); text-align:center; padding:40px 0;">
+          <div style="font-size:50px; opacity:0.1; margin-bottom:20px;">📦</div>
+          Your digital vault is empty. Secure a **High-Stakes Spin** to win exclusive Flux gear.
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- Modal for Games -->
+<div class="modal" id="game-modal">
+  <div class="modal-content">
+    <span class="close-modal" onclick="closeGame()">&times;</span>
+    <div id="game-ui-container">
+      <!-- Game Content Injected Here -->
+    </div>
+  </div>
+</div>
+
+<!-- Custom Result Overlay -->
+<div class="result-overlay" id="result-overlay">
+  <div class="result-card">
+    <div class="result-emoji" id="res-emoji">🎁</div>
+    <div class="result-title" id="res-title">SUCCESS!</div>
+    <div class="result-msg" id="res-msg">Outcome secured. Credits added to your vault.</div>
+    <button class="btn-play" style="background:var(--accent); color:black;" onclick="closeResult()">CLAIM REWARD</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+  let currentCoins = 0;
+
+  function showResult(title, msg, emoji = '🎁') {
+      document.getElementById('res-title').innerText = title;
+      document.getElementById('res-msg').innerHTML = msg;
+      document.getElementById('res-emoji').innerText = emoji;
+      document.getElementById('result-overlay').style.display = 'flex';
+  }
+
+  function closeResult() {
+      document.getElementById('result-overlay').style.display = 'none';
+      syncStatus();
+  }
+
+  async function syncStatus() {
+    try {
+      const res = await fetch('/api/gamification/status');
+      const data = await res.json();
+      
+      const coinEl = document.getElementById('global-coins');
+      if (parseInt(coinEl.innerText) !== data.coins) {
+          coinEl.classList.add('coin-update-anim');
+          setTimeout(() => coinEl.classList.remove('coin-update-anim'), 600);
+      }
+      
+      currentCoins = data.coins;
+      coinEl.innerText = data.coins;
+      
+      // Update Prestige Bar based on coins (Scale: 0 - 30,000)
+      const prestigePercent = Math.min(100, (data.coins / 30000) * 100);
+      document.getElementById('prestige-bar').style.width = prestigePercent + '%';
+      
+      if (data.level < 3 && !data.is_pro) {
+          document.getElementById('spin-lock-overlay').style.display = 'flex';
+          document.getElementById('main-spin-btn').disabled = true;
+      } else {
+          document.getElementById('spin-lock-overlay').style.display = 'none';
+          document.getElementById('main-spin-btn').disabled = false;
+      }
+
+      // Populate Streak Map
+      const streakMap = document.getElementById('streak-map');
+      if (streakMap) {
+          const days = data.streak_days || 0;
+          streakMap.innerHTML = Array(7).fill().map((_, i) => {
+              const dayNum = i + 1;
+              const active = dayNum <= days;
+              const isJackpot = dayNum === 7;
+              return `
+                <div class="status-pill" style="height:80px; flex-direction:column; justify-content:center; 
+                   opacity: ${active ? 1 : 0.3}; 
+                   background: ${active ? (isJackpot ? 'linear-gradient(135deg, #f59e0b, #ef4444)' : 'rgba(16,185,129,0.15)') : 'rgba(255,255,255,0.05)'};
+                   border: 1px solid ${active ? (isJackpot ? '#f59e0b' : '#10b981') : 'rgba(255,255,255,0.1)'};
+                   color: ${active ? 'white' : 'var(--text-dim)'};">
+                   <span style="font-size:10px;">DAY ${dayNum}</span>
+                   <span style="font-size:24px;">${active ? '✅' : (isJackpot ? '🎁' : '🛡️')}</span>
+                </div>
+              `;
+          }).join('');
+      }
+
+      if (document.getElementById('badges-grid')) {
+        document.getElementById('badges-grid').innerHTML = data.badges.map(b => `
+          <div class="game-card" style="opacity: ${b.unlocked ? 1 : 0.4}; border-color: ${b.unlocked ? 'var(--accent)' : 'var(--card-border)'};">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div class="game-badge" style="background: ${b.unlocked ? 'var(--accent)' : '#444'}">${b.rarity.toUpperCase()}</div>
+                ${b.unlocked ? '<div style="color:var(--coin); font-weight:900;">+🛡️ 500</div>' : ''}
+            </div>
+            <h3>${b.name}</h3>
+            <p>${b.type.toUpperCase()} ACHIEVEMENT</p>
+            <div style="font-size:12px; font-weight:700;">${b.unlocked ? '✅ MILESTONE REWARD SECURED' : '🔒 UNLOCK TO EARN 500 CREDITS'}</div>
+          </div>
+        `).join('');
+      }
+    } catch(e) { console.error(e); }
+  }
+
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    event.currentTarget.classList.add('active');
+    
+    if (tabId === 'leaderboard') loadLeaderboard();
+  }
+
+  async function loadLeaderboard() {
+    const res = await fetch('/api/arena-leaderboard');
+    const data = await res.json();
+    document.getElementById('lb-body').innerHTML = data.leaderboard.map(p => `
+      <div class="lb-row ${p.name.includes('Agent') ? '' : 'you'}">
+        <div class="lb-rank">#${p.rank}</div>
+        <div class="lb-user">
+          <div class="lb-avatar">${p.name[0]}</div>
+          <div>
+            <div style="font-weight:700;">${p.name}</div>
+            <div style="font-size:11px; color:var(--text-dim);">${p.level}</div>
+          </div>
+        </div>
+        <div class="lb-score">${p.score}</div>
+        <div class="lb-velocity">${p.velocity}</div>
+      </div>
+    `).join('');
+  }
+
+  function openGame(type) {
+    const modal = document.getElementById('game-modal');
+    const container = document.getElementById('game-ui-container');
+    modal.style.display = 'flex';
+    
+    if (type === 'spin') {
+      container.innerHTML = `
+        <h3>Lucky Pulse</h3>
+        <div class="spin-container">
+          <div class="spin-pointer"></div>
+          <div id="spin-wheel"></div>
+        </div>
+        <button class="btn-play" id="btn-spin" onclick="runSpin()">SPIN NOW</button>
+      `;
+    } else if (type === 'ttt') {
+      container.innerHTML = `
+        <h3>Ghost Tic-Tac-Toe</h3>
+        <p style="margin-bottom:20px;">Beat the AI. You are X.</p>
+        <div class="ttt-grid" id="ttt-grid">
+          ${Array(9).fill().map((_, i) => `<div class="ttt-cell" onclick="makeMove(${i})"></div>`).join('')}
+        </div>
+        <div id="ttt-status" style="margin-top:20px; font-weight:700;">Your Turn</div>
+      `;
+      initTTT();
+    } else if (type === 'flappy') {
+      container.innerHTML = `
+        <h3>Wealth Flight</h3>
+        <p>Press SPACE or Tap to hover. Don't crash into Volatility!</p>
+        <canvas id="flappy-canvas" width="400" height="400" style="background:#050510; border-radius:20px; margin:20px auto; display:block;"></canvas>
+        <div id="flappy-score" style="font-size:24px; font-weight:800;">Score: 0</div>
+        <button class="btn-play" onclick="startFlappy()" id="btn-start-flappy">START ENGINE</button>
+      `;
+    } else if (type === 'tiles') {
+      container.innerHTML = `
+        <h3>Pattern Mining</h3>
+        <p>Repeat the sequence of light hashes to secure the block.</p>
+        <div class="ttt-grid" id="tiles-grid" style="grid-template-columns: repeat(2, 1fr); width:210px;">
+          <div class="ttt-cell" style="height:100px;" onclick="pressTile(0)" id="tile-0"></div>
+          <div class="ttt-cell" style="height:100px;" onclick="pressTile(1)" id="tile-1"></div>
+          <div class="ttt-cell" style="height:100px;" onclick="pressTile(2)" id="tile-2"></div>
+          <div class="ttt-cell" style="height:100px;" onclick="pressTile(3)" id="tile-3"></div>
+        </div>
+        <button class="btn-play" style="margin-top:20px;" onclick="startTiles()" id="btn-start-tiles">INITIATE SEQUENCE</button>
+      `;
+    } else if (type === 'marketrun') {
+      container.innerHTML = `
+        <h3>Ghost Market Run</h3>
+        <p>Collect Green Candles (Profit), Avoid Red Candles (Loss).</p>
+        <div id="run-container" style="background:#050510; height:300px; width:100%; border-radius:20px; position:relative; overflow:hidden;">
+          <div id="run-ghost" style="position:absolute; bottom:20px; left:50px; font-size:40px; transition: 0.1s;">⚡</div>
+          <div id="run-score" style="position:absolute; top:20px; left:20px; font-size:20px; font-weight:800;">Profit: ₹0</div>
+        </div>
+        <button class="btn-play" style="margin-top:20px;" onclick="startMarketRun()" id="btn-start-run">INITIATE MARKET RUN</button>
+      `;
+    }
+  }
+
+  function closeGame() {
+    marketRunActive = false; // Stop run if modal closed
+    document.getElementById('game-modal').style.display = 'none';
+    syncStatus();
+  }
+
+  // --- Lucky Spin Logic ---
+  async function runSpin() {
+    const btn = document.getElementById('btn-spin');
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/gamification/spin', { method: 'POST' });
+      const data = await res.json();
+      if (!data.success) {
+        if (res.status === 403) {
+            alert(data.error);
+        } else {
+            alert(data.error);
+        }
+        btn.disabled = false;
+        return;
+      }
+      
+      const wheel = document.getElementById('spin-wheel');
+      const deg = 3600 + Math.random() * 360;
+      wheel.style.transform = `rotate(${deg}deg)`;
+      
+      setTimeout(() => {
+        let msg = `Gained: ${data.reward} (${data.value} Credits)`;
+        let emoji = '💸'; 
+        if (data.gift) {
+            msg += `<br><br><b>🎁 EXTRA GIFT:</b> ${data.gift} SECURED!`;
+            emoji = '🎁';
+            addGiftToInventory(data.gift);
+        }
+        showResult("PULSE SECURED", msg, emoji);
+        btn.disabled = false;
+      }, 4500);
+    } catch(e) { showResult("Error", "Pulse Failed", "❌"); btn.disabled = false; }
+  }
+
+  function addGiftToInventory(gift) {
+      const inv = document.getElementById('gift-inventory');
+      const emojiMap = {
+          "Flux Premium Hoodie": "🧢", "Digital Wealth Badge": "💎",
+          "AI Insights Token": "🎟️", "Custom Card Skin": "💳", "Early Access Pass": "🔑"
+      };
+      if (inv.innerHTML.includes('No physical rewards')) inv.innerHTML = '';
+      const card = document.createElement('div');
+      card.className = 'store-card';
+      card.style.cssText = "padding:15px; min-width:120px; animation: bounceIn 0.6s ease;";
+      card.innerHTML = `<div style="font-size:32px;">${emojiMap[gift] || '🎁'}</div><div style="font-size:11px; margin-top:8px;">${gift}</div>`;
+      inv.appendChild(card);
+  }
+
+  async function buyLuckyDraw() {
+      try {
+          const res = await fetch('/api/gamification/buy-lucky-draw', { method: 'POST' });
+          const data = await res.json();
+          showResult(data.success ? "ENTRY SECURED" : "ACCESS DENIED", data.message || data.error, data.success ? "🎟️" : "⚠️");
+      } catch(e) { showResult("Error", "Purchase Failed", "❌"); }
+  }
+
+  async function dailyCheckin() {
+      try {
+          const res = await fetch('/api/gamification/daily-checkin', { method: 'POST' });
+          const data = await res.json();
+          if (data.success) {
+              showResult("STREAK MAINTAINED", data.message, "🔥");
+          } else {
+              showResult("ALREADY SECURED", data.error, "⏳");
+          }
+      } catch(e) { showResult("Error", "Check-in Failed", "❌"); }
+  }
+
+  async function redeemPro(days) {
+      try {
+          const res = await fetch('/api/gamification/redeem-pro', {
+              method: 'POST', headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ days })
+          });
+          const data = await res.json();
+          showResult(data.success ? "PRO UNLOCKED" : "UPGRADE FAILED", data.message || data.error, data.success ? "⚡" : "⚠️");
+      } catch(e) { showResult("Error", "Redemption Failed", "❌"); }
+  }
+
+  async function unlockCEO() {
+      try {
+          const res = await fetch('/api/gamification/unlock-ceo', { method: 'POST' });
+          const data = await res.json();
+          showResult(data.success ? "LEGENDARY STATUS" : "ACCESS DENIED", data.message || data.error, data.success ? "💎" : "🔒");
+      } catch(e) { showResult("Error", "Unlock Error", "❌"); }
+  }
+
+  // --- Market Run Logic ---
+  let marketRunActive = false;
+  function startMarketRun() {
+      if (marketRunActive) return;
+      marketRunActive = true;
+      document.getElementById('btn-start-run').style.display = 'none';
+      const container = document.getElementById('run-container');
+      const ghost = document.getElementById('run-ghost');
+      let score = 0;
+      let ghostPos = 20;
+
+      // Controls
+      const moveUp = () => { if(ghostPos < 240) ghostPos += 40; ghost.style.bottom = ghostPos+'px'; };
+      const moveDown = () => { if(ghostPos > 20) ghostPos -= 40; ghost.style.bottom = ghostPos+'px'; };
+      document.onkeydown = (e) => { 
+          if(e.key === 'ArrowUp') moveUp();
+          if(e.key === 'ArrowDown') moveDown();
+      };
+
+      const spawnCandle = () => {
+          if (!marketRunActive) return;
+          const candle = document.createElement('div');
+          const isGreen = Math.random() > 0.4;
+          const lane = [20, 60, 100, 140, 180, 220][Math.floor(Math.random()*6)];
+          candle.style.cssText = `position:absolute; right:-40px; bottom:${lane}px; width:20px; height:60px; background:${isGreen ? '#10b981' : '#ef4444'}; border-radius:4px; box-shadow:0 0 10px ${isGreen ? '#10b981' : '#ef4444'};`;
+          container.appendChild(candle);
+          
+          let pos = -40;
+          const interval = setInterval(() => {
+              if(!marketRunActive) { clearInterval(interval); candle.remove(); return; }
+              pos += 5;
+              candle.style.right = pos + 'px';
+              
+              // Collision Check
+              const candleRight = pos; 
+              const containerWidth = container.offsetWidth;
+              const candleLeft = containerWidth - pos - 20;
+              
+              if (candleLeft < 90 && candleLeft > 50 && lane === ghostPos) {
+                  if (isGreen) {
+                      score += 1000;
+                      document.getElementById('run-score').innerText = `Profit: ₹${score}`;
+                      candle.style.opacity = 0;
+                      clearInterval(interval);
+                      setTimeout(() => candle.remove(), 100);
+                  } else {
+                      clearInterval(interval);
+                      endMarketRun(score);
+                  }
+              }
+
+              if (pos > containerWidth + 40) {
+                  clearInterval(interval);
+                  candle.remove();
+              }
+          }, 20);
+          
+          setTimeout(spawnCandle, 800 - Math.min(400, score/50));
+      };
+      spawnCandle();
+  }
+
+  async function endMarketRun(score) {
+      marketRunActive = false;
+      const res = await fetch('/api/gamification/record-game', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ game_type: 'market-run', score: score })
+      });
+      const d = await res.json();
+      showResult("LIQUIDATION", `You exited with ₹${score} profit.<br>${d.message}`, "📉");
+      document.getElementById('btn-start-run').style.display = 'block';
+  }
+
+  // --- Tic Tac Toe Logic ---
+  let board = Array(9).fill(null);
+  let gameActive = true;
+  function initTTT() {
+    board = Array(9).fill(null); gameActive = true;
+  }
+  function makeMove(i) {
+    if (!gameActive || board[i]) return;
+    board[i] = 'X';
+    renderTTT();
+    if (checkWinner('X')) { finishTTT(true); return; }
+    if (board.every(b => b)) { finishTTT(false, true); return; }
+    
+    // AI Move
+    setTimeout(() => {
+      let empty = board.map((v, idx) => v === null ? idx : null).filter(v => v !== null);
+      let move = empty[Math.floor(Math.random() * empty.length)];
+      board[move] = 'O';
+      renderTTT();
+      if (checkWinner('O')) finishTTT(false);
+    }, 500);
+  }
+  function renderTTT() {
+    const cells = document.querySelectorAll('.ttt-cell');
+    board.forEach((b, i) => { 
+        cells[i].innerText = b || '';
+        cells[i].style.color = b === 'X' ? 'var(--accent)' : 'white';
+    });
+  }
+  function checkWinner(p) {
+    const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    return wins.some(w => w.every(idx => board[idx] === p));
+  }
+  async function finishTTT(win, draw = false) {
+    gameActive = false;
+    const status = draw ? "DRAW" : (win ? "YOU WIN!" : "AGENT WINS");
+    const emoji = draw ? "🤝" : (win ? "🏆" : "🤖");
+    
+    if (win) {
+      const res = await fetch('/api/gamification/record-game', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ game_type: 'tic-tac-toe', score: 10 })
+      });
+      const d = await res.json();
+      showResult(status, `You defeated the AI! ${d.message}`, emoji);
+    } else {
+      showResult(status, draw ? "The match ended in a stalemate." : "The Ghost Agent outsmarted you. Try again!", emoji);
+    }
+  }
+
+  // --- Flappy Logic (Simplified) ---
+  let flappyActive = false;
+  function startFlappy() {
+    if (flappyActive) return;
+    flappyActive = true;
+    const canvas = document.getElementById('flappy-canvas');
+    const ctx = canvas.getContext('2d');
+    const btn = document.getElementById('btn-start-flappy');
+    btn.style.display = 'none';
+
+    let birdY = 200, birdV = 0, score = 0;
+    let pipes = [{x: 400, y: 150}];
+    
+    function draw() {
+      if (!flappyActive) return;
+      ctx.clearRect(0, 0, 400, 400);
+      
+      // Bird (A small Flux Logo ⚡)
+      birdV += 0.25; birdY += birdV;
+      ctx.fillStyle = "var(--accent)";
+      ctx.font = "24px Outfit";
+      ctx.fillText("⚡", 50, birdY);
+      
+      // Pipes (Volatility Pipes)
+      pipes.forEach(p => {
+        p.x -= 2;
+        ctx.fillStyle = "rgba(255,255,255,0.1)";
+        ctx.fillRect(p.x, 0, 50, p.y);
+        ctx.fillRect(p.x, p.y + 120, 50, 400);
+        
+        if (p.x === 50) score++;
+        if (p.x < -50) { p.x = 400; p.y = 50 + Math.random() * 200; }
+        
+        // Crash
+        if (p.x < 80 && p.x > 30 && (birdY < p.y || birdY > p.y + 110)) {
+           endFlappy(score);
+        }
+      });
+      
+      if (birdY > 400 || birdY < 0) endFlappy(score);
+      
+      document.getElementById('flappy-score').innerText = `Score: ${score}`;
+      requestAnimationFrame(draw);
+    }
+    
+    document.addEventListener('keydown', (e) => { if(e.code === 'Space') birdV = -5; });
+    canvas.addEventListener('mousedown', () => birdV = -5);
+    draw();
+  }
+
+  async function endFlappy(score) {
+    if (!flappyActive) return;
+    flappyActive = false;
+    alert(`Game Over! Final Survival Score: ${score}`);
+    const res = await fetch('/api/gamification/record-game', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ game_type: 'flappy', score: score })
+    });
+    const d = await res.json();
+    alert(d.message || "Saved Result");
+    document.getElementById('btn-start-flappy').style.display = 'block';
+  }
+
+  // --- Tiles pattern logic ---
+  let sequence = [], userSequence = [], tilesActive = false;
+  function startTiles() {
+    sequence = []; userSequence = []; tilesActive = true;
+    nextTile();
+  }
+  function nextTile() {
+    sequence.push(Math.floor(Math.random() * 4));
+    playSequence();
+  }
+  async function playSequence() {
+    for (const s of sequence) {
+      await new Promise(r => setTimeout(r, 600));
+      flashTile(s);
+    }
+  }
+  function flashTile(i) {
+    const t = document.getElementById(`tile-${i}`);
+    if(!t) return;
+    t.style.background = "white";
+    setTimeout(() => t.style.background = "var(--glass)", 300);
+  }
+  function pressTile(i) {
+    if (!tilesActive) return;
+    flashTile(i);
+    userSequence.push(i);
+    if (userSequence[userSequence.length-1] !== sequence[userSequence.length-1]) {
+      alert("Verification Failed!");
+      tilesActive = false;
+      return;
+    }
+    if (userSequence.length === sequence.length) {
+      if (sequence.length >= 5) {
+        finishTiles(sequence.length * 10);
+      } else {
+        userSequence = [];
+        setTimeout(nextTile, 1000);
+      }
+    }
+  }
+  async function finishTiles(score) {
+    tilesActive = false;
+    alert(`Mining Successful! Score: ${score}`);
+    const res = await fetch('/api/gamification/record-game', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ game_type: 'tiles', score: score })
+    });
+    const d = await res.json();
+    alert(d.message || "Saved Result");
+  }
+
+  // --- Store logic ---
+  async function redeemPro(days) {
+    if (!confirm(`Redeem ${days} days of Flux Pro?`)) return;
+    const res = await fetch('/api/gamification/redeem-pro', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ days: days })
+    });
+    const d = await res.json();
+    alert(d.message || d.error);
+    syncStatus();
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    if (typeof initAppPromise !== 'undefined') await initAppPromise;
+    syncStatus();
+  });
+</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/annyang/2.6.1/annyang.min.js"></script>
+  <script src="global-voice.js"></script>
+</body>
+</html>

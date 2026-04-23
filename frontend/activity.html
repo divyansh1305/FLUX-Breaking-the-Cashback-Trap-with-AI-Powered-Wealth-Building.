@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Activity Center - Flux AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="global-voice.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #08080f; --card: #12121e; --card2: #181828;
+      --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+      --white: #ffffff; --gray: #8888aa;
+      --purple: #7c5cbf; --blue: #2563eb; --green: #34d399; --orange: #f59e0b;
+      --cyan: #06b6d4; --red: #ef4444;
+    }
+    body { background:var(--bg); color:var(--white); font-family:'Inter', sans-serif; overflow-x:hidden; min-height:100vh; }
+    
+    .navbar {
+      position:fixed; top:18px; left:50%; transform:translateX(-50%); width:calc(100% - 40px); max-width:1280px;
+      background:rgba(12,12,22,0.82); backdrop-filter:blur(20px); border:1px solid var(--border2); border-radius:28px;
+      padding:0 26px; height:68px; display:flex; align-items:center; justify-content:space-between; z-index:1000;
+    }
+    .nav-brand { display:flex; align-items:center; gap:12px; text-decoration:none; color: white; }
+    .nav-logo { width:38px; height:38px; border-radius:14px; background:linear-gradient(135deg,var(--blue),var(--purple)); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:20px; box-shadow:0 0 18px rgba(37,99,235,0.25); }
+    
+    .main { max-width:1000px; margin:0 auto; padding:120px 24px 60px; }
+    
+    .hero-title { font-size: 56px; font-weight:900; letter-spacing:-2px; margin-bottom:16px; display:flex; align-items:center; gap:12px; }
+    .hero-title span { background:linear-gradient(135deg, #2563eb, #a855f7); -webkit-background-clip:text; color:transparent; }
+    
+    .audit-card { background: linear-gradient(135deg, rgba(37,99,235,0.1), transparent); border: 1px solid rgba(37,99,235,0.3); padding: 32px; border-radius: 32px; margin-bottom: 40px; position: relative; overflow: hidden; }
+    .audit-card::after { content: "AI AUDIT LOG"; position: absolute; top: 10px; right: 20px; font-size: 10px; font-weight: 800; color: var(--blue); letter-spacing: 2px; }
+    .audit-text { font-size: 18px; line-height: 1.6; color: rgba(255,255,255,0.9); font-weight: 500; font-style: italic; }
+
+    .timeline { position: relative; border-left: 2px solid var(--border2); margin-left: 20px; padding-left: 40px; }
+    .time-item { position: relative; margin-bottom: 40px; }
+    .time-item::before { content: ""; position: absolute; left: -49px; top: 0; width: 16px; height: 16px; background: var(--bg); border: 3px solid var(--blue); border-radius: 50%; box-shadow: 0 0 10px var(--blue); }
+    .time-date { font-size: 12px; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .time-card { background: var(--card); border: 1px solid var(--border); padding: 24px; border-radius: 20px; transition: 0.3s; }
+    .time-card:hover { border-color: rgba(37,99,235,0.4); transform: translateX(10px); }
+    .time-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+    .time-desc { font-size: 14px; color: var(--gray); line-height: 1.5; }
+
+    .badge { padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; background: rgba(255,255,255,0.05); color: var(--gray); }
+    .badge-exec { background: rgba(52,211,153,0.1); color: var(--green); border: 1px solid rgba(52,211,153,0.2); }
+    .badge-warn { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div style="display:flex; align-items:center; gap: 20px;">
+      <a href="dashboard.html" class="nav-brand">
+        <div class="nav-logo">🔎</div>
+        <div style="font-weight:700; font-size:20px;">Flux Activity Feed</div>
+      </a>
+  </div>
+  <a href="dashboard.html" style="color:var(--gray); text-decoration:none; font-weight:600; font-size:14px;">Back to Dashboard ➔</a>
+</nav>
+
+<div class="main">
+  <h1 class="hero-title">Behavioral <span>Identity Trace</span></h1>
+  <p style="color:var(--gray); font-size:16px; margin-bottom:40px; max-width:700px;">Every autonomous action, every trade, and every AI nudge. The forensic audit of your wealth journey.</p>
+
+  <div class="audit-card">
+    <div class="audit-text" id="ai-audit-report">
+      "Ghost AI is currently aggregating your wealth velocity metrics... stand by for behavioral synthesis."
+    </div>
+  </div>
+
+  <div class="timeline" id="activity-timeline">
+    <!-- Items loaded via script -->
+    <div style="color:var(--gray); font-size:14px; padding:20px 0;">Syncing with FLUX Kernel...</div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Load Timeline
+    async function loadActivities() {
+      const res = await fetch('/api/user-activities');
+      const data = await res.json();
+      const cont = document.getElementById('activity-timeline');
+      
+      if(data && data.length > 0) {
+        cont.innerHTML = data.map(i => {
+           let badgeCls = "badge";
+           if(i.action_type.toLowerCase().includes('shoonya') || i.action_type.toLowerCase().includes('sweep')) badgeCls += " badge-exec";
+           if(i.action_type.toLowerCase().includes('warning') || i.action_type.toLowerCase().includes('blocked')) badgeCls += " badge-warn";
+           
+           return `
+            <div class="time-item">
+              <div class="time-date">${new Date(i.timestamp).toLocaleString()}</div>
+              <div class="time-card">
+                <div class="time-title">
+                  <span class="${badgeCls}">${i.action_type}</span>
+                </div>
+                <div class="time-desc">${i.description}</div>
+              </div>
+            </div>
+           `;
+        }).join('');
+      } else {
+        cont.innerHTML = `<div style="color:var(--gray); font-size:14px; padding:20px 0;">No activities recorded yet. Start interacting with Flux to see your trace.</div>`;
+      }
+    }
+
+    // 2. Load AI Audit
+    async function loadAudit() {
+      try {
+        const res = await fetch('/api/activity-audit');
+        const data = await res.json();
+        document.getElementById('ai-audit-report').innerText = `"${data.report}"`;
+      } catch(e) {
+        document.getElementById('ai-audit-report').innerText = "Strategic Audit: Ready for optimization.";
+      }
+    }
+
+    loadActivities();
+    loadAudit();
+  });
+</script>
+<script src="app.js"></script>
+</body>
+</html>

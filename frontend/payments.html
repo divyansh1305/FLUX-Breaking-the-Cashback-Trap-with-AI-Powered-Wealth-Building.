@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Flux Wallet - Anti-Cashback Engine</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/annyang/2.6.1/annyang.min.js"></script>
+  <script src="global-voice.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #05050A; --bg2: #0e0e1a; --card: #12121e; --card-glass: rgba(18,18,30,0.6);
+      --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.12);
+      --white: #ffffff; --gray: #8888aa;
+      --orange: #f59e0b; --red: #ef4444;
+      --purple: #9b79e0; --blue: #3b82f6; --green2: #34d399;
+      --glow-orange: rgba(245,158,11,0.25);
+      --glow-green: rgba(52,211,153,0.3);
+    }
+    body { background:var(--bg); color:var(--white); font-family:'Inter', sans-serif; overflow-x:hidden; min-height:100vh; }
+    
+    .navbar {
+      position:fixed; top:20px; left:50%; transform:translateX(-50%); width:90%; max-width:1100px;
+      background:rgba(10,10,15,0.7); backdrop-filter:blur(24px); border:1px solid var(--border); border-radius:100px;
+      padding:12px 24px; display:flex; justify-content:space-between; align-items:center; z-index:1000;
+    }
+    .nav-logo { font-weight:900; font-size:20px; letter-spacing:-1px; display:flex; align-items:center; gap:8px; color:white; text-decoration:none; }
+    .nav-logo-icon { width:28px; height:28px; background:linear-gradient(135deg, var(--orange), #fcd34d); border-radius:8px; display:flex; align-items:center; justify-content:center; box-shadow:0 0 15px var(--glow-orange); color:#000; }
+    .nav-links { display:flex; gap:8px; }
+    .nav-link { color:var(--gray); text-decoration:none; font-size:13px; font-weight:600; padding:8px 16px; border-radius:100px; transition:0.2s; }
+    .nav-link:hover, .nav-link.active { color:var(--white); background:rgba(255,255,255,0.08); }
+    .pro-badge { background:rgba(245,158,11,0.15); border:1px solid var(--orange); color:var(--orange); padding:4px 12px; border-radius:100px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:1px; box-shadow:0 0 15px var(--glow-orange); }
+    
+    .main { max-width:1100px; margin:0 auto; padding:120px 24px 60px; }
+    
+    .hero-title { font-size: 52px; font-weight:900; letter-spacing:-2px; margin-bottom:12px; line-height: 1.1; }
+    .hero-title span { background:linear-gradient(135deg,var(--orange),#fcd34d); -webkit-background-clip:text; color:transparent; }
+    .hero-subtitle { color: var(--gray); font-size: 16px; margin-bottom: 40px; }
+
+    .dashboard-grid { display: grid; grid-template-columns: 1fr 420px; gap: 24px; }
+    @media(max-width:1050px) { .dashboard-grid { grid-template-columns: 1fr; } }
+    
+    .dash-card { background: var(--card-glass); backdrop-filter:blur(16px); border: 1px solid var(--border); border-radius: 24px; padding: 24px; position:relative; overflow:hidden; }
+    .card-title { font-size: 13px; color: var(--gray); font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 16px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+
+    /* Net Financial Position instead of plain wallet */
+    .net-asset-card { background: linear-gradient(135deg, rgba(52,211,153,0.1), transparent); border: 1px solid rgba(52,211,153,0.3); padding: 32px; border-radius: 24px; box-shadow:0 10px 40px rgba(52,211,153,0.05); }
+    .balance-amount { font-size: 56px; font-weight: 900; letter-spacing: -2px; margin-bottom: 12px; color: var(--white); }
+    
+    .wealth-extraction { background: linear-gradient(135deg, rgba(155,121,224,0.1), transparent); border: 1px solid rgba(155,121,224,0.3); border-radius: 24px; padding: 24px; margin-top:24px; }
+
+    /* Contacts List */
+    .contacts-row { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; margin-top:16px; }
+    .contacts-row::-webkit-scrollbar { display: none; }
+    .contact-bubble { display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; transition:0.3s; }
+    .contact-bubble:hover { transform: translateY(-3px); }
+    .contact-avatar { width: 56px; height: 56px; border-radius: 50%; border: 2px solid var(--border2); display:flex; align-items:center; justify-content:center; font-size: 20px; background: var(--card); }
+    .contact-name { font-size: 12px; font-weight: 600; color: var(--gray); }
+
+    /* Transactions */
+    .tx-list { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+    .tx-item { display: flex; align-items: center; justify-content: space-between; background: var(--bg2); padding: 16px; border-radius: 16px; border: 1px solid var(--border); }
+    .tx-icon { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .tx-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+    .tx-time { font-size: 12px; color: var(--gray); }
+    .tx-amount { font-weight: 800; font-size: 16px; }
+    
+    /* Reverse UPI Scanner */
+    .scanner-container { background: #000; border-radius: 20px; height: 220px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 50px rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.1); margin-bottom: 24px; }
+    .scanner-frame { width: 140px; height: 140px; border: 2px solid rgba(255,255,255,0.2); position: relative; }
+    .scanner-frame::before { content:''; position:absolute; top:-2px; left:-2px; width: 30px; height: 30px; border-top: 4px solid var(--orange); border-left: 4px solid var(--orange); }
+    .scanner-frame::after { content:''; position:absolute; top:-2px; right:-2px; width: 30px; height: 30px; border-top: 4px solid var(--orange); border-right: 4px solid var(--orange); }
+    .scanner-frame .bl { position:absolute; bottom:-2px; left:-2px; width: 30px; height: 30px; border-bottom: 4px solid var(--orange); border-left: 4px solid var(--orange); }
+    .scanner-frame .br { position:absolute; bottom:-2px; right:-2px; width: 30px; height: 30px; border-bottom: 4px solid var(--orange); border-right: 4px solid var(--orange); }
+    .scan-line { width: 100%; height: 2px; background: var(--orange); position: absolute; box-shadow: 0 0 15px var(--orange); animation: scan 2s linear infinite; }
+    @keyframes scan { 0% { top: 0; } 50% { top: 100%; } 100% { top: 0; } }
+
+    .super-jump-btn { background: linear-gradient(135deg, var(--orange), #fcd34d); color: #000; padding: 18px 24px; border-radius: 12px; font-size: 16px; font-weight: 900; text-align: center; border: none; cursor: pointer; box-shadow: 0 10px 30px rgba(245,158,11,0.4); width: 100%; transition: 0.3s; }
+    .super-jump-btn:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(245,158,11,0.6); }
+
+    /* Numpad Overlay */
+    .numpad-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(24px); z-index:2000; display:none; align-items:center; justify-content:center; flex-direction:column; }
+    .numpad-container { background: var(--card); border: 1px solid var(--border); padding: 32px; border-radius: 32px; width: 100%; max-width: 400px; text-align:center; box-shadow: 0 40px 100px rgba(0,0,0,0.8); }
+    .numpad-display { font-size: 56px; font-weight: 900; margin-bottom: 30px; letter-spacing:-2px; color:var(--white); }
+    .numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .numpad-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border2); padding: 24px; font-size: 24px; font-weight: 700; border-radius: 20px; cursor: pointer; color: white; transition:0.1s; }
+    .numpad-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.1); }
+
+    /* Reverse UPI Interrupt Modal */
+    .interrupt-modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); backdrop-filter:blur(30px); z-index:3000; display:none; align-items:center; justify-content:center; flex-direction:column; padding: 24px; }
+    .interrupt-card { background: linear-gradient(180deg, rgba(239, 68, 68, 0.1), var(--card)); border: 1px solid rgba(239, 68, 68, 0.4); padding: 40px; border-radius: 32px; width: 100%; max-width: 500px; text-align:center; box-shadow: 0 40px 100px rgba(239, 68, 68, 0.2); }
+    .interrupt-title { font-size: 40px; font-weight: 900; margin-bottom: 16px; color: var(--red); line-height:1.1; letter-spacing:-1px;}
+    .interrupt-btn { padding: 18px; border-radius: 16px; font-size: 15px; font-weight: 800; cursor: pointer; border: none; width: 100%; margin-bottom: 12px; transition: 0.2s; }
+    
+    /* Bill Predictor Options */
+    .bill-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+    .bill-btn { background: rgba(155,121,224,0.1); color: #dfa4ff; border: 1px solid rgba(155,121,224,0.3); padding: 10px; border-radius: 8px; font-size: 12px; font-weight: 700; width: 100%; cursor:pointer; margin-top: 8px; transition:0.2s; }
+    .bill-btn:hover { background:var(--purple); color:#000; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="nav-logo"><div class="nav-logo-icon">⚡</div>FLUX</a>
+    <div class="nav-links">
+    <a href="smart-analyzer.html" class="nav-link" style="color:#10b981; font-weight:800;">Statement AI 🚀</a>
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+    <a href="analytics_overview.html" class="nav-link" style="color:var(--orange);">Master Analytics 📊</a>
+    <a href="insurance.html" class="nav-link">Insurance</a>
+    <a href="payments.html" class="nav-link">Flux Pay</a>
+  </div>
+  <div class="pro-badge">PRO</div>
+</nav>
+
+<div class="main">
+  <h1 class="hero-title">Anti-Cashback <span>Engine</span></h1>
+  <p class="hero-subtitle">Traditional apps reward you for spending. We extract wealth from your financial inefficiencies.</p>
+
+  <div class="dashboard-grid">
+    <!-- Left Col: Anti-Cashback Stats -->
+    <div style="display:flex; flex-direction:column; gap:24px;">
+      
+      <!-- NET FINANCIAL POSITION -->
+      <div class="net-asset-card">
+        <div style="font-size:12px; color:var(--green2); font-weight:800; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">Net Financial Position</div>
+        <div class="balance-amount" id="p-balance">₹<span id="bal-val">3,11,364</span></div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+           <div style="background:rgba(52,211,153,0.15); display:inline-block; padding:6px 12px; border-radius:8px; font-size:13px; color:var(--green2); font-weight:600; width:max-content; border:1px solid rgba(52,211,153,0.2);">+ ₹12,840 protected this month</div>
+           <div style="background:rgba(59,130,246,0.15); display:inline-block; padding:6px 12px; border-radius:8px; font-size:13px; color:#60a5fa; font-weight:600; width:max-content; border:1px solid rgba(59,130,246,0.2);">+ ₹4,200 optimized via AI</div>
+        </div>
+      </div>
+
+      <!-- WEALTH EXTRACTION -->
+      <div class="wealth-extraction">
+         <div class="card-title" style="color:#dfa4ff;"><span style="font-size:16px;">🧬</span> Today's Hidden Gains</div>
+         <div style="display:flex; justify-content:space-between; margin-bottom:12px; border-bottom:1px dashed rgba(255,255,255,0.1); padding-bottom:12px;">
+           <span style="color:var(--gray); font-size:14px;">Price Optimization</span>
+           <span style="color:var(--white); font-weight:700;">+ ₹120</span>
+         </div>
+         <div style="display:flex; justify-content:space-between; margin-bottom:12px; border-bottom:1px dashed rgba(255,255,255,0.1); padding-bottom:12px;">
+           <span style="color:var(--gray); font-size:14px;">Subscription Trimming</span>
+           <span style="color:var(--white); font-weight:700;">+ ₹60</span>
+         </div>
+         <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
+           <span style="color:var(--gray); font-size:14px;">Spend Rerouting</span>
+           <span style="color:var(--white); font-weight:700;">+ ₹300</span>
+         </div>
+         <div style="background:linear-gradient(90deg, rgba(155,121,224,0.2), transparent); padding:16px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; border-left:4px solid var(--purple);">
+           <span style="font-size:14px; font-weight:800; color:#dfa4ff; text-transform:uppercase;">Total Mined</span>
+           <span style="font-size:24px; font-weight:900; color:white;">₹480</span>
+         </div>
+         <div style="text-align:right; font-size:11px; color:var(--gray); margin-top:8px;">Earned without spending. Zero cashback.</div>
+      </div>
+
+      <!-- UPGRADED TRANSACTIONS -->
+      <div class="dash-card">
+        <div class="card-title">📝 Autonomously Optimized Log</div>
+        <div class="tx-list">
+          <div class="tx-item" style="border-color:rgba(239, 68, 68, 0.3); background:rgba(239, 68, 68, 0.05);">
+            <div style="display:flex; align-items:center; gap:16px; width:100%;">
+              <div class="tx-icon" style="background:rgba(239,68,68,0.2); color:#ef4444;">☕</div>
+              <div style="flex:1;">
+                <div style="display:flex; justify-content:space-between;">
+                  <div class="tx-title" style="color:white;">Starbucks</div>
+                  <div class="tx-amount" style="color:#ef4444;">- ₹450</div>
+                </div>
+                <div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); padding:6px 10px; border-radius:6px; margin-top:8px; font-size:11px; color:var(--orange);">
+                   <span style="font-weight:700;">⚠ AI Insight:</span> Alternative was ₹290. <br><span style="color:var(--green2); font-weight:800; display:block; margin-top:4px;">→ ₹160 gap auto-invested from surplus to offset loss.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="tx-item">
+            <div style="display:flex; align-items:center; gap:16px; width:100%;">
+              <div class="tx-icon">💸</div>
+              <div style="flex:1;">
+                <div style="display:flex; justify-content:space-between;">
+                  <div class="tx-title" style="color:white;">Salary Credited</div>
+                  <div class="tx-amount" style="color:var(--green2);">+ ₹1,20,500</div>
+                </div>
+                <div class="tx-time" style="margin-top:4px;">NEFT • 20% Swept to Index Fund</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Col: Scanner & Predictor -->
+    <div style="display:flex; flex-direction:column; gap:24px;">
+      
+      <!-- Reverse UPI Scanner -->
+      <div class="dash-card">
+        <div class="card-title">📱 Reverse UPI</div>
+        <div class="scanner-container">
+          <div class="scanner-frame">
+            <div class="bl"></div>
+            <div class="br"></div>
+            <div class="scan-line"></div>
+          </div>
+        </div>
+        <button class="super-jump-btn" onclick="openPay('Scan & Pay')">Initiate Payment</button>
+        <p style="font-size:12px; color:var(--gray); text-align:center; margin-top:12px;">Flux scans transactions before they leave your bank.</p>
+      </div>
+
+      <!-- AI Bill Predictor EVOLVED -->
+      <div class="dash-card" style="border-color: rgba(59,130,246,0.3); background:linear-gradient(180deg, rgba(59,130,246,0.05), var(--card-glass));">
+         <div class="card-title" style="color:#60a5fa;"><span style="font-size:16px;">🤖</span> AI Bill Optimization</div>
+         
+         <!-- Bill 1 -->
+         <div class="bill-card">
+           <div style="display:flex; gap:12px; margin-bottom:12px;">
+             <div style="width:40px; height:40px; background:rgba(37,99,235,0.1); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px;">🌐</div>
+             <div style="flex:1;">
+               <div style="font-size:15px; font-weight:800; color:white;">Jio Fiber Broadband</div>
+               <div style="font-size:12px; color:var(--gray);">₹999 Due in 2 days</div>
+             </div>
+           </div>
+           
+           <div style="background:rgba(255,255,255,0.05); padding:12px; border-radius:8px; margin-bottom:12px;">
+             <div style="font-size:12px; font-weight:700; color:var(--green2); margin-bottom:4px;">AI Analysis Found:</div>
+             <div style="font-size:12px; color:rgba(255,255,255,0.8); line-height:1.5;">You only use ~120GB/month. You can downgrade your plan safely and save ₹300/month.</div>
+           </div>
+           
+           <div style="display:flex; gap:8px;">
+             <button class="bill-btn" style="background:var(--blue); border:none; color:white;" onclick="this.innerText='Plan Downgraded ✅'">Downgrade Plan</button>
+             <button class="bill-btn" onclick="this.innerText='Investing ₹300/Mo 🚀'; this.style.background='var(--green2)'; this.style.color='#000';">Keep + Invest Difference</button>
+           </div>
+         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reverse UPI Numpad -->
+<div class="numpad-overlay" id="numpad">
+  <div class="numpad-container">
+    <div style="font-size:14px; color:var(--gray); margin-bottom:8px; text-transform:uppercase; font-weight:700;" id="payee-name">Paying Zomato/Swiggy</div>
+    <div class="numpad-display">₹<span id="typed-amt">0</span></div>
+    
+    <div class="numpad-grid">
+      <button class="numpad-btn" onclick="typeAmt('1')">1</button>
+      <button class="numpad-btn" onclick="typeAmt('2')">2</button>
+      <button class="numpad-btn" onclick="typeAmt('3')">3</button>
+      <button class="numpad-btn" onclick="typeAmt('4')">4</button>
+      <button class="numpad-btn" onclick="typeAmt('5')">5</button>
+      <button class="numpad-btn" onclick="typeAmt('6')">6</button>
+      <button class="numpad-btn" onclick="typeAmt('7')">7</button>
+      <button class="numpad-btn" onclick="typeAmt('8')">8</button>
+      <button class="numpad-btn" onclick="typeAmt('9')">9</button>
+      <button class="numpad-btn" onclick="closePay()" style="color:var(--gray); font-size:16px;">Cancel</button>
+      <button class="numpad-btn" onclick="typeAmt('0')">0</button>
+      <button class="numpad-btn" onclick="typeAmt('00')">00</button>
+    </div>
+
+    <button style="width:100%; margin-top:24px; background:white; border:none; color:#000; padding:20px; border-radius:16px; font-size:18px; font-weight:900; cursor:pointer;" onclick="triggerReverseUPI()">Proceed to Pay ➔</button>
+  </div>
+</div>
+
+<!-- Reverse UPI INTERRUPT Modal (The Mic Drop) -->
+<div class="interrupt-modal" id="interrupt-ui">
+  <div class="interrupt-card">
+    <div style="font-size:50px; margin-bottom:12px; animation:shake 0.5s;">🛑</div>
+    <div class="interrupt-title">WAIT.</div>
+    <p style="font-size:16px; color:white; margin-bottom:32px; line-height:1.5;">You've already spent <b>₹3,200</b> on food this week. This ₹<span id="int-amt">1,000</span> pushes you into the red zone.</p>
+    
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      <!-- Option 1 -->
+      <button id="skip-btn" class="interrupt-btn" style="background:var(--green2); color:#000; box-shadow:0 10px 30px rgba(52,211,153,0.3); font-size:18px; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="extractWealth()">
+        <span>🚀</span> Skip & Invest ₹500 Instead
+      </button>
+      <!-- Option 2 -->
+      <button id="reduce-btn" class="interrupt-btn" style="background:rgba(255,255,255,0.05); color:white; border:1px solid rgba(255,255,255,0.1);" onclick="reduceOrder()">Reduce order to ₹300</button>
+      <!-- Option 3 -->
+      <button id="force-btn" class="interrupt-btn" style="background:transparent; color:var(--gray); text-decoration:underline;" onclick="forceProceed()">Force Proceed (Not Recommended)</button>
+    </div>
+  </div>
+  
+  <!-- Success extraction state -->
+  <div class="interrupt-card" id="extraction-success" style="display:none; background:linear-gradient(180deg, rgba(52,211,153,0.1), var(--card)); border-color:var(--green2); box-shadow:0 40px 100px rgba(52,211,153,0.2);">
+      <div style="font-size:60px; margin-bottom:12px;">💎</div>
+      <div style="font-size:28px; font-weight:900; color:white; margin-bottom:12px;">No Cashback.</div>
+      <div style="font-size:32px; font-weight:900; color:var(--green2); margin-bottom:24px;">₹<span id="succ-total">220</span> Secured Instead.</div>
+      
+      <div style="text-align:left; background:rgba(0,0,0,0.3); padding:20px; border-radius:16px; border:1px solid rgba(52,211,153,0.2); margin-bottom:24px;">
+        <div style="color:var(--gray); font-size:14px; margin-bottom:8px; display:flex; justify-content:space-between;"><span>Investment Swept:</span> <strong style="color:white;">₹<span id="succ-inv">100</span></strong></div>
+        <div style="color:var(--gray); font-size:14px; margin-bottom:8px; display:flex; justify-content:space-between;"><span>Optimization Saved:</span> <strong style="color:white;">₹<span id="succ-opt">70</span></strong></div>
+        <div style="color:var(--gray); font-size:14px; display:flex; justify-content:space-between;"><span>Trimming Harvested:</span> <strong style="color:white;">₹<span id="succ-trim">50</span></strong></div>
+      </div>
+      
+      <p style="color:var(--text-muted); font-size:15px; font-weight:600; margin-bottom: 24px;">You are now richer without spending more.</p>
+      
+      <button style="background:white; color:#000; padding:16px 24px; border-radius:12px; font-size:16px; font-weight:900; cursor:pointer; width:100%; border:none; box-shadow:0 10px 30px rgba(255,255,255,0.2);" onclick="window.location.href='markets.html'">View Asset in Portfolio ➔</button>
+  </div>
+</div>
+
+<style>
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    50% { transform: translateX(10px); }
+    75% { transform: translateX(-10px); }
+  }
+</style>
+
+<script>
+  let currentVal = "";
+  
+  function openPay(name) {
+    const payeeName = name || 'Zomato/Swiggy';
+    document.getElementById('payee-name').innerText = 'Paying ' + payeeName;
+    currentVal = ""; 
+    document.getElementById('typed-amt').innerText = "0";
+    document.getElementById('numpad').style.display = 'flex';
+    gsap.fromTo('.numpad-container', {y: 50, opacity: 0}, {y: 0, opacity: 1, duration: 0.3});
+  }
+
+  function closePay() {
+    gsap.to('.numpad-container', {y: 50, opacity: 0, duration: 0.2, onComplete: () => {
+      document.getElementById('numpad').style.display = 'none';
+      currentVal = "";
+    }});
+  }
+
+  function typeAmt(val) {
+    if(val === 'C') { currentVal = ""; document.getElementById('typed-amt').innerText = "0"; return; }
+    if(currentVal.length > 7) return;
+    if(currentVal === "" && val === "0") return;
+    if(currentVal === "" && val === "00") return;
+    currentVal += val;
+    document.getElementById('typed-amt').innerText = formatMoney(currentVal);
+  }
+
+  function formatMoney(numStr) {
+    if(!numStr) return "0";
+    const x = numStr.toString();
+    const lastThree = x.substring(x.length-3);
+    const otherNumbers = x.substring(0,x.length-3);
+    if(otherNumbers != '') {
+        return otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + "," + lastThree;
+    }
+    return lastThree;
+  }
+
+  // The Mic Drop Moment
+  function triggerReverseUPI() {
+    if(currentVal === "" || parseInt(currentVal) <= 0) return;
+    
+    // Hide numpad, show interrupt
+    document.getElementById('numpad').style.display = 'none';
+    const ui = document.getElementById('interrupt-ui');
+    ui.style.display = 'flex';
+    
+    const val = parseFloat(currentVal);
+    document.getElementById('int-amt').innerText = formatMoney(currentVal);
+    
+    // Dynamic text
+    const half = Math.round(val / 2);
+    const reduceAim = Math.round(val * 0.3); // target reduced cart
+    document.getElementById('skip-btn').innerHTML = `<span>🚀</span> Skip & Invest ₹${half} Instead`;
+    document.getElementById('reduce-btn').innerHTML = `Reduce order to ₹${reduceAim}`;
+    
+    if(window.GhostAI && window.GhostAI.speak) {
+      window.GhostAI.speak("Wait. I am pausing this transaction. You are exceeding your behavioral threshold for dining out.");
+    } else {
+      const u = new SpeechSynthesisUtterance("Wait. I am pausing this transaction. You are exceeding your behavioral threshold for dining out.");
+      window.speechSynthesis.speak(u);
+    }
+  }
+
+  function extractWealth() {
+    // Hide interrupt card, show success
+    const cards = document.querySelectorAll('.interrupt-card');
+    cards[0].style.display = 'none';
+    cards[1].style.display = 'block';
+    
+    const val = parseFloat(currentVal);
+    const totalSecured = Math.round(val * 0.22);
+    const invested = Math.round(val * 0.10);
+    const optimized = Math.round(val * 0.07);
+    const trimmed = Math.round(val * 0.05);
+
+    document.getElementById('succ-total').innerText = formatMoney(totalSecured);
+    document.getElementById('succ-inv').innerText = formatMoney(invested);
+    document.getElementById('succ-opt').innerText = formatMoney(optimized);
+    document.getElementById('succ-trim').innerText = formatMoney(trimmed);
+    
+    if(window.GhostAI && window.GhostAI.speak) {
+      window.GhostAI.speak(`Payment aborted. Total optimization isolated. I have successfully swept ${formatMoney(totalSecured)} rupees directly into your wealth portfolio instead of losing it.`);
+    } else {
+      const u = new SpeechSynthesisUtterance(`Payment aborted. Total optimization isolated. I have successfully swept ${totalSecured} rupees directly into your wealth portfolio instead of losing it.`);
+      window.speechSynthesis.speak(u);
+    }
+    
+    // Actually sweep it into the db portfolio!
+    fetch('/api/autonomous-sweep', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ amount: totalSecured })
+    }).catch(e => console.error("Sweep failed", e));
+    
+    // Animate balance
+    const balEl = document.getElementById('bal-val');
+    setTimeout(() => {
+       balEl.innerText = formatMoney(311364 + totalSecured);
+       balEl.style.color = "#34d399";
+       gsap.from(balEl, {scale:1.2, duration:0.5});
+    }, 1500);
+  }
+  
+  async function reduceOrder() {
+     const btn = document.getElementById('reduce-btn');
+     btn.innerHTML = 'Negotiating with merchant...';
+     
+     const reduceAim = Math.round(parseFloat(currentVal) * 0.3);
+     try {
+        await fetch('/api/expense', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ amount: reduceAim, category: 'AI Reduced Food Order', date: new Date().toISOString() })
+        });
+     } catch(e) {}
+     
+     if(window.GhostAI && window.GhostAI.speak) {
+         window.GhostAI.speak(`Order successfully reduced to ${reduceAim} rupees. I have charged your wallet.`);
+     }
+     
+     btn.style.background = "#34d399";
+     btn.style.color = "#000";
+     btn.innerHTML = `Order Reduced ✅ (-₹${reduceAim})`;
+     
+     setTimeout(() => window.location.reload(), 2500);
+  }
+  
+  async function forceProceed() {
+     const btn = document.getElementById('force-btn');
+     btn.innerHTML = 'Processing inefficient payment...';
+     
+     const val = parseFloat(currentVal);
+     try {
+        await fetch('/api/expense', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ amount: val, category: 'Forced Food Order', date: new Date().toISOString() })
+        });
+     } catch(e) {}
+     
+     if(window.GhostAI && window.GhostAI.speak) {
+         window.GhostAI.speak(`Payment of ${val} rupees sent. Warning: Optimization opportunity lost.`);
+     }
+     
+     btn.style.color = "#ef4444";
+     btn.innerHTML = `Payment Completed 🔴 (-₹${val})`;
+     
+     setTimeout(() => window.location.reload(), 2500);
+  }
+</script>
+</body>
+</html>

@@ -45,6 +45,18 @@ We bypass standard browser printing via a built-in Python `reportlab` generator 
 ### 9. 🎨 Premium UI/UX & Data Visualizations
 Integrated **Three.js** to generate interactive 3D particle data visualizations representing the strength of the user's wealth engine. It utilizes cutting-edge CSS glassmorphism, responsive Grid layouts, automated UI Confetti drops, and VanillaTilt.js micro-animations.
 
+### 10. 🏛️ Tax Harvester (AI C.A.)
+We built a 1-Click Tax AI that simulates scanning Shoonya portfolios to find "Unrealized Losses", recommending tax-loss harvesting automatically while calculating 80C/80D gap analysis to drop the user's tax bracket.
+
+### 11. ❤️ Zero-Loss Legacy Vault
+A Smart Contract-inspired Estate Planner. Using "Proof of Life" pings, the vault ensures that if a user is inactive for 180 days, their wealth map and cloud credentials automatically and securely transfer to their linked nominee.
+
+### 12. 📈 Zero-Latency ALGO Markets & Super Jump UPI
+Fully integrated TradingView WebSockets for completely free, API-limitless real-time global market data without backend delays. Paired with a "Super Jump" Finvasia UPI Numpad simulator for zero-friction payments.
+
+### 13. 🛡️ Claim-Free AI Insurance Space
+A digital-twin policy vault. Ghost AI visually simulates extracting driving licenses and RCs from Digilocker to "execute" an auto-claim without the user typing a single word.
+
 ---
 
 ## 💼 Business Viability & Growth Loop
@@ -97,3 +109,4 @@ Because this project utilizes live email-sending protocols and the **Google Gemi
 ---
 
 **Built with ❤️ for Finvasia.**
+

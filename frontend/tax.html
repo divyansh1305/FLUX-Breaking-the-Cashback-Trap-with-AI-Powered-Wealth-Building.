@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Flux Tax Harvester - AI CA</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="global-voice.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #08080f; --card: #12121e; --card2: #181828;
+      --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+      --white: #ffffff; --gray: #8888aa;
+      --purple: #7c5cbf; --blue: #2563eb; --green: #34d399; --orange: #f59e0b;
+      --cyan: #06b6d4; --red: #ef4444;
+    }
+    body { background:var(--bg); color:var(--white); font-family:'Inter', sans-serif; overflow-x:hidden; min-height:100vh; }
+    
+    .navbar {
+      position:fixed; top:18px; left:50%; transform:translateX(-50%); width:calc(100% - 40px); max-width:1280px;
+      background:rgba(12,12,22,0.82); backdrop-filter:blur(20px); border:1px solid var(--border2); border-radius:28px;
+      padding:0 26px; height:68px; display:flex; align-items:center; justify-content:space-between; z-index:1000;
+    }
+    .nav-brand { display:flex; align-items:center; gap:12px; text-decoration:none; color: white; }
+    .nav-logo { width:38px; height:38px; border-radius:14px; background:linear-gradient(135deg,var(--cyan),var(--purple)); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:20px; box-shadow:0 0 18px rgba(6,182,212,0.25); }
+    
+    .main { max-width:1100px; margin:0 auto; padding:120px 24px 60px; }
+    
+    .hero-title { font-size: 56px; font-weight:900; letter-spacing:-2px; margin-bottom:16px; display:flex; align-items:center; gap:12px; }
+    .hero-title span { background:linear-gradient(135deg, #06b6d4, #a855f7); -webkit-background-clip:text; color:transparent; }
+    
+    .summary-card { background: linear-gradient(135deg, rgba(6,182,212,0.1), transparent); border: 1px solid rgba(6,182,212,0.3); padding: 40px; border-radius: 32px; display: flex; align-items:center; justify-content:space-between; margin-bottom: 40px; }
+    .summary-val { font-size: 56px; font-weight: 900; color: #fff; letter-spacing: -2px; text-shadow: 0 0 30px rgba(6,182,212,0.4); margin-bottom: 8px;}
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media(max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .dash-card { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 32px; position:relative; overflow:hidden; }
+    .card-title { font-size: 16px; color: var(--gray); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 24px; display:flex; align-items:center; gap:12px; }
+
+    .action-btn { background: linear-gradient(135deg, var(--cyan), var(--blue)); color: white; padding: 16px 24px; border-radius: 16px; font-weight: 800; font-size: 16px; text-align: center; border: none; cursor: pointer; display:block; width:100%; transition: 0.2s; box-shadow: 0 10px 30px rgba(6,182,212,0.3); }
+    .action-btn:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(6,182,212,0.5); }
+    
+    .harvest-item { background: rgba(0,0,0,0.3); border: 1px solid var(--border2); padding: 16px; border-radius: 16px; display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; }
+
+    .section-deductions { display: flex; flex-direction: column; gap: 12px; }
+    .deduction-bar { background: var(--card2); border: 1px solid var(--border2); border-radius: 12px; padding: 16px; position: relative; overflow: hidden; }
+    .deduction-fill { position: absolute; left: 0; top: 0; height: 100%; background: rgba(52,211,153,0.15); z-index: 0; }
+    
+    .h-badge { display:inline-block; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; background: rgba(168,85,247,0.15); color: #dfa4ff; border: 1px solid rgba(168,85,247,0.3); }
+
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div style="display:flex; align-items:center; gap: 20px;">
+      <a href="dashboard.html" class="nav-brand">
+        <div class="nav-logo">🏛️</div>
+        <div style="font-weight:700; font-size:20px;">Flux Tax Harvester</div>
+      </a>
+  </div>
+  <a href="dashboard.html" style="color:var(--gray); text-decoration:none; font-weight:600; font-size:14px;">Back to Dashboard ➔</a>
+</nav>
+
+<div class="main">
+  <h1 class="hero-title">1-Click <span>Tax Optimization</span></h1>
+  <p style="color:var(--gray); font-size:16px; margin-bottom:40px; max-width:700px;">Ghost AI scans your Shoonya portfolio, Digilocker, and bank transactions globally to legally minimize your tax liability.</p>
+
+  <div class="summary-card">
+    <div>
+      <div style="font-size:14px; font-weight:700; color:var(--cyan); text-transform:uppercase; letter-spacing:2px; margin-bottom:12px;">Potential Tax Savings (FY 26-27)</div>
+      <div class="summary-val">₹42,350</div>
+      <div style="color:rgba(255,255,255,0.7); font-size:14px;">1 Click away from executing all strategies.</div>
+    </div>
+    <div style="text-align:right;">
+      <div class="h-badge">ITR-2 Ready</div>
+      <div class="h-badge" style="background:rgba(52,211,153,0.1); border-color:rgba(52,211,153,0.3); color:var(--green);">Old Regime Optimal</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    
+    <!-- Tax Loss Harvesting -->
+    <div class="dash-card">
+      <div class="card-title">📉 Tax-Loss Harvesting</div>
+      <p style="color:var(--gray); font-size:13px; margin-bottom:20px;">AI identified losing positions. Sell them today to offset your capital gains, then automatically reinvest tomorrow.</p>
+      
+      <div class="harvest-item">
+        <div>
+          <div style="font-weight:700;">HDFC Bank (Equity)</div>
+          <div style="font-size:12px; color:var(--gray);">Unrealized Loss: <span style="color:var(--red);">-₹15,000</span></div>
+        </div>
+        <div style="font-size:12px; color:var(--green); font-weight:700;">Saves ₹2,250</div>
+      </div>
+      
+      <div class="harvest-item">
+        <div>
+          <div style="font-weight:700;">Wipro Ltd</div>
+          <div style="font-size:12px; color:var(--gray);">Unrealized Loss: <span style="color:var(--red);">-₹8,400</span></div>
+        </div>
+        <div style="font-size:12px; color:var(--green); font-weight:700;">Saves ₹1,260</div>
+      </div>
+
+      <button class="action-btn" style="margin-top:24px;" onclick="executeHarvest(this)">Execute Harvest via Shoonya ⚡</button>
+    </div>
+
+    <!-- 80C Deductions -->
+    <div class="dash-card">
+      <div class="card-title">⚖️ Section Deductions AI</div>
+      
+      <div class="section-deductions">
+        <div class="deduction-bar">
+          <div class="deduction-fill" style="width: 75%;"></div>
+          <div style="position:relative; z-index:1; display:flex; justify-content:space-between; align-items:center;">
+             <div>
+               <div style="font-weight:700;">80C (PPF, ELSS, EPF)</div>
+               <div style="font-size:12px; color:var(--gray);">Found ₹1.12L in statements</div>
+             </div>
+             <div style="text-align:right;">
+               <div style="font-weight:800; color:white;">₹1,12,000</div>
+               <div style="font-size:11px; color:#f59e0b;">Gap: ₹38k to jump</div>
+             </div>
+          </div>
+          <a href="#" style="position:relative; z-index:1; display:inline-block; font-size:12px; color:var(--cyan); margin-top:12px; text-decoration:none; font-weight:600;">Auto-Invest ₹38K in ELSS →</a>
+        </div>
+
+        <div class="deduction-bar">
+          <div class="deduction-fill" style="width: 100%; background:rgba(37,99,235,0.15);"></div>
+          <div style="position:relative; z-index:1; display:flex; justify-content:space-between; align-items:center;">
+             <div>
+               <div style="font-weight:700;">80D (Health Ins.)</div>
+               <div style="font-size:12px; color:var(--gray);">Synced from Clamp Vault</div>
+             </div>
+             <div style="text-align:right;">
+               <div style="font-weight:800; color:white;">₹25,000</div>
+               <div style="font-size:11px; color:var(--green);">Maxed Out ✓</div>
+             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+
+  <div style="margin-top:40px; text-align:center;">
+    <button class="action-btn" style="background:var(--card2); border:1px solid #dfa4ff; color:#dfa4ff; width:auto; display:inline-block; padding: 18px 40px;" onclick="fileITR()">
+      Generate & Auto-File ITR-2 Proxy
+    </button>
+  </div>
+
+</div>
+
+<script>
+  async function executeHarvest(btn) {
+    btn.innerText = "Re-balancing...";
+    btn.style.opacity = "0.7";
+    btn.disabled = true;
+    
+    if(window.GhostAI && window.GhostAI.speak) {
+      window.GhostAI.speak("Harvesting tax losses. Selling underperforming assets and rebalancing instantly to lock in your tax discounts.");
+    }
+
+    try {
+        const res = await fetch('/api/tax/harvest', { method: 'POST' });
+        const data = await res.json();
+        
+        if(data.success) {
+            btn.innerText = `Harvest Complete ✅ (Saved ₹${data.saved})`;
+            btn.style.background = "#10b981";
+            btn.style.boxShadow = "0 10px 30px rgba(16,185,129,0.3)";
+            btn.style.opacity = "1";
+        } else {
+            btn.innerText = "Harvest Failed";
+            btn.style.background = "var(--red)";
+        }
+    } catch(e) {
+        btn.innerText = "Error Harvesting";
+    }
+  }
+
+  async function fileITR() {
+      const btn = document.querySelector('button[onclick="fileITR()"]');
+      if (btn) btn.innerText = "Uploading to IT Portal...";
+
+      if(window.GhostAI && window.GhostAI.speak) {
+          window.GhostAI.speak("Generating your final ITR proxy. Uploading securely to Income Tax portal...");
+      }
+      
+      try {
+          const res = await fetch('/api/tax/file-itr', { method: 'POST' });
+          const data = await res.json();
+          if(data.success && btn) {
+              btn.innerText = "ITR-2 Filed Successfully ✅";
+              btn.style.background = "rgba(16,185,129,0.15)";
+              btn.style.color = "#10b981";
+              btn.style.borderColor = "#10b981";
+              if(window.GhostAI && window.GhostAI.speak) {
+                  setTimeout(() => window.GhostAI.speak("Your ITR has been filed successfully."), 3000);
+              }
+          }
+      } catch(e) {
+          if (btn) btn.innerText = "Error Filing ITR";
+      }
+  }
+</script>
+<script src="app.js"></script>
+</body>
+</html>

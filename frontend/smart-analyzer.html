@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Flux ML Statement Engine</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #030303; --card: #0c0c10; --card-hover: #121216;
+      --border: rgba(255,255,255,0.08); --border-focus: rgba(255,255,255,0.2);
+      --white: #ffffff; --gray: #a1a1aa; --dark-gray: #3f3f46;
+      --orange: #f97316; --purple: #a855f7; --blue: #3b82f6; --green: #10b981;
+      --neon-pink: #f43f5e; --neon-cyan: #06b6d4;
+    }
+    body { background:var(--bg); color:var(--white); font-family:'Inter', sans-serif; min-height:100vh; overflow-x:hidden; }
+    
+    /* Navbar */
+    .navbar {
+      position:fixed; top:20px; left:50%; transform:translateX(-50%); width:calc(100% - 40px); max-width:1280px;
+      background:rgba(5,5,5,0.85); backdrop-filter:blur(24px); border:1px solid var(--border); border-radius:28px;
+      padding:0 24px; height:70px; display:flex; align-items:center; justify-content:space-between; z-index:1000;
+    }
+    .nav-brand { display:flex; align-items:center; gap:12px; text-decoration:none; color: white; }
+    .nav-logo { width:40px; height:40px; border-radius:14px; background:linear-gradient(135deg,var(--purple),#c084fc); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:22px; font-family:'Outfit', sans-serif;}
+    .nav-center { display:flex; gap:8px; }
+    .nav-link { color:var(--gray); font-size:14px; font-weight:600; text-decoration:none; padding:10px 18px; border-radius:20px; transition:0.3s; }
+    .nav-link:hover, .nav-link.active { color:var(--white); background:rgba(255,255,255,0.08); }
+    
+    /* Layout */
+    .container { max-width:1280px; margin:0 auto; padding:120px 24px 80px; position:relative; }
+    
+    /* Header Area */
+    .engine-header { border-bottom:1px solid var(--border); padding-bottom: 30px; margin-bottom: 40px; display:flex; justify-content:space-between; align-items:flex-end;}
+    .engine-title { font-family:'Outfit', sans-serif; font-size: 48px; font-weight: 900; letter-spacing: -1.5px; line-height: 1.1; display:flex; flex-direction:column; }
+    .engine-title span { color: var(--gray); font-size: 20px; font-weight: 500; letter-spacing: 0; margin-bottom: 8px;}
+    .btn-run { background: var(--white); color:#000; border:none; padding:16px 32px; border-radius:18px; font-size:16px; font-weight:800; cursor:pointer; font-family:'Inter', sans-serif; transition:0.3s; box-shadow: 0 10px 30px rgba(255,255,255,0.15); display:inline-flex; align-items:center; gap:10px; }
+    .btn-run:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(255,255,255,0.25); }
+    
+    /* Pre-run state */
+    #empty-state { text-align: center; padding: 100px 0; }
+    
+    /* Master Grid */
+    #dashboard-view { display:none; animation: fadeIn 0.8s ease-out; }
+    @keyframes fadeIn { from {opacity:0; transform:scale(0.98);} to {opacity:1; transform:scale(1);} }
+    
+    .grid-macro { display: grid; grid-template-columns: 1fr 340px; gap: 24px;}
+    @media(max-width:1024px) { .grid-macro { grid-template-columns: 1fr; } }
+    
+    .panel { background: rgba(12,12,16,0.7); backdrop-filter:blur(20px); border: 1px solid var(--border); border-radius: 28px; padding: 32px; position: relative; overflow: hidden; }
+    .panel-title { color:var(--gray); font-size:13px; text-transform:uppercase; font-weight:700; letter-spacing:1.5px; margin-bottom:24px; display:flex; align-items:center; gap:10px;}
+    .panel-title::before { content:''; display:block; width:8px; height:8px; background:var(--gray); border-radius:50%; }
+    
+    /* Top Numbers */
+    .num-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 24px;}
+    @media(max-width:768px) { .num-grid { grid-template-columns: 1fr; } }
+    .metric-card { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.04); border-radius: 20px; padding: 24px;}
+    .m-lbl { color: var(--gray); font-size: 13px; font-weight: 600; margin-bottom: 8px;}
+    .m-val { font-family:'Outfit'; font-size: 42px; font-weight: 800; letter-spacing:-1px; }
+    
+    /* Chart Section */
+    .chart-box { height: 320px; width: 100%; border:1px solid rgba(255,255,255,0.03); background:#050505; border-radius:20px; padding:20px;}
+    
+    /* Route UI (Where it goes) */
+    .route-box { background: linear-gradient(180deg, #18181b, #000); border: 1px solid rgba(249,115,22,0.3); border-radius: 24px; padding: 32px; text-align:center; position:relative; overflow:hidden;}
+    .route-badge { background:rgba(249,115,22,0.15); color:var(--orange); display:inline-block; padding:8px 16px; border-radius:30px; font-size:12px; font-weight:800; letter-spacing:1px; text-transform:uppercase; margin-bottom:16px;}
+    .route-target { font-family:'Outfit'; font-size: 32px; font-weight: 900; margin-bottom: 12px; background: linear-gradient(90deg, #fff, #a1a1aa); -webkit-background-clip:text; -webkit-text-fill-color:transparent;}
+    .route-desc { color: var(--gray); font-size: 14px; line-height: 1.6; }
+    .glow-bg { position:absolute; top: -50px; left: 50%; width: 200px; height: 200px; background: var(--orange); filter: blur(100px); opacity: 0.15; transform:translateX(-50%); pointer-events:none;}
+    
+    /* Transaction Analysis */
+    .tx-row { display: grid; grid-template-columns: 2fr 1fr 1fr; align-items:center; padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size:14px; transition:0.2s;}
+    .tx-row:hover { background: rgba(255,255,255,0.02); }
+    .tx-head { color: var(--gray); font-size: 11px; text-transform:uppercase; font-weight:700; padding: 0 16px 12px; border-bottom: 1px solid var(--border);}
+    .cb-tag { background: rgba(16,185,129,0.15); color: var(--green); padding:4px 10px; border-radius:6px; font-weight:700; font-size:12px; font-family:'Outfit'; }
+    
+    /* Cluster Map */
+    .cluster-item { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+    .c-bar-bg { width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; margin-top: 8px; overflow:hidden;}
+    .c-bar-fill { height: 100%; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="nav-brand">
+    <div class="nav-logo">F</div>
+    <div style="font-weight:700; font-size:20px; font-family:'Outfit';">Flux Engine</div>
+  </a>
+  <div class="nav-center">
+    <a href="smart-analyzer.html" class="nav-link active" style="color:#10b981; font-weight:800;">Statement AI 🚀</a>
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+    <a href="analytics_overview.html" class="nav-link" style="color:var(--orange);">Master Analytics 📊</a>
+    <a href="insurance.html" class="nav-link">Insurance</a>
+    <a href="payments.html" class="nav-link">Flux Pay</a>
+  </div>
+  <div class="nav-right"></div>
+</nav>
+
+<div class="container">
+    <div class="engine-header">
+        <h1 class="engine-title">
+            <span>statement.csv Analysis</span>
+            Deep Cashflow Intelligence
+        </h1>
+        <button id="btn-execute-model" class="btn-run" onclick="window.runMLAnalyzer()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            Execute Model
+        </button>
+    </div>
+
+    <!-- Loading State -->
+    <div id="empty-state">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--dark-gray)" stroke-width="1" style="margin-bottom:20px;">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line>
+        </svg>
+        <div style="font-size:24px; font-weight:600; font-family:'Outfit'; color:var(--gray);">Awaiting Injection</div>
+        <p style="color:var(--dark-gray); margin-top:8px;">Load your yearly statement to reverse-engineer your payments.</p>
+    </div>
+
+    <!-- Results Overview -->
+    <div id="dashboard-view">
+        
+        <div class="num-grid">
+            <div class="metric-card">
+                <div class="m-lbl">Total Verified Spending</div>
+                <div class="m-val" style="color:var(--white);" id="m-spend">₹0</div>
+            </div>
+            <div class="metric-card">
+                <div class="m-lbl">ML Processed Transactions</div>
+                <div class="m-val" style="color:var(--gray);" id="m-txn">0</div>
+            </div>
+            <div class="metric-card" style="box-shadow: 0 0 30px rgba(16,185,129,0.05); border-color:rgba(16,185,129,0.2); background:rgba(16,185,129,0.02);">
+                <div class="m-lbl" style="color:var(--green);">Passive Wealth Extracted</div>
+                <div class="m-val" style="color:var(--green);" id="m-generated">₹0</div>
+            </div>
+        </div>
+
+        <div class="grid-macro">
+            
+            <!-- Left Column -->
+            <div style="display:flex; flex-direction:column; gap:24px;">
+                <div class="panel">
+                    <div class="panel-title" style="--gray:var(--purple);">Spending Clusters: The Origin</div>
+                    <p style="color:var(--gray); font-size:14px; margin-bottom:24px;">AI-identified macro categories where your money is flowing outward. Each of these creates friction that Flux converts into cashback power.</p>
+                    <div id="clusters-container"></div>
+                </div>
+
+                <!-- Left Column (Clusters only) -->
+            </div>
+
+            <!-- Right Column -->
+            <div style="display:flex; flex-direction:column; gap:24px;">
+                <div class="route-box" id="route-panel">
+                    <div class="glow-bg"></div>
+                    <div class="route-badge" id="sweep-badge">Algorithmic Routing</div>
+                    <h3 class="route-target" id="sweep-route">Analyzing...</h3>
+                    <p class="route-desc" id="sweep-desc">Determining destination matrix.</p>
+                    
+                    <div style="margin-top:32px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:16px; padding:20px; text-align:left;">
+                        <div style="font-size:12px; color:var(--gray); text-transform:uppercase; font-weight:700; margin-bottom:8px;">Where the money went</div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                            <div>
+                                <div style="font-size:13px; color:var(--gray); margin-bottom:4px;">Projected Compounded Velocity (3Y)</div>
+                                <div style="font-size:28px; font-weight:800; font-family:'Outfit'; color:var(--white);" id="sweep-fv">₹0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="panel" style="padding:24px;">
+                    <div class="panel-title" style="--gray:var(--gray);">Cashback Yield Tracker</div>
+                    <!-- Chart area showing cumulative generation -->
+                    <div class="chart-box">
+                        <canvas id="yieldChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- ETF Vault Projections -->
+        <div class="panel" style="margin-top: 24px; padding: 40px; background: radial-gradient(circle at right, rgba(249,115,22,0.1), transparent 40%);">
+            <div class="panel-title" style="--gray:var(--orange); font-size:16px;">🟡 Gold & Silver Vault Projections</div>
+            <p style="color:var(--gray); margin-bottom:32px;">Real-time forecasting of your passively extracted AI wealth compounding securely inside digital Gold and Silver ETFs (Assuming 12% annual appreciation).</p>
+            
+            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:20px;">
+                <div style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.05); padding:24px; border-radius:16px; text-align:center;">
+                    <div style="font-size:12px; color:var(--gray); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">Total Invested</div>
+                    <div style="font-family:'Outfit'; font-size:32px; font-weight:800; color:var(--white);" id="etf-invested">₹0</div>
+                </div>
+                <div style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.05); padding:24px; border-radius:16px; text-align:center;">
+                    <div style="font-size:12px; color:var(--gray); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">Appreciation (1 Year)</div>
+                    <div style="font-family:'Outfit'; font-size:32px; font-weight:800; color:var(--green);" id="etf-1y">₹0</div>
+                </div>
+                <div style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.05); padding:24px; border-radius:16px; text-align:center;">
+                    <div style="font-size:12px; color:var(--gray); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">Projection (3 Years)</div>
+                    <div style="font-family:'Outfit'; font-size:32px; font-weight:800; color:var(--green);" id="etf-3y">₹0</div>
+                </div>
+                <div style="background:rgba(0,0,0,0.5); border:1px solid rgba(249,115,22,0.3); padding:24px; border-radius:16px; text-align:center; box-shadow:0 0 40px rgba(249,115,22,0.1);">
+                    <div style="font-size:12px; color:var(--orange); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; font-weight:800;">Projection (10 Years)</div>
+                    <div style="font-family:'Outfit'; font-size:38px; font-weight:900; color:var(--white);" id="etf-10y">₹0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Massive Interactive Data Table -->
+        <div class="panel" style="margin-top: 24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:16px;">
+                <div>
+                    <div class="panel-title" style="--gray:var(--blue); margin-bottom:8px;">Deep Cashflow Database</div>
+                    <p style="color:var(--gray); font-size:14px;">Search and trace every single payment, the cashback automatically built from it, and your exact remaining balance.</p>
+                </div>
+                <input type="text" id="txSearch" onkeyup="filterLedger()" placeholder="Search Payee or Category..." style="background:rgba(0,0,0,0.5); border:1px solid var(--border); color:#fff; padding:12px 20px; border-radius:12px; width:100%; max-width:320px; outline:none; font-family:'Inter'; transition:0.3s; box-shadow:inset 0 2px 10px rgba(0,0,0,0.5);">
+            </div>
+            
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse: collapse; text-align:left; font-size:14px; min-width: 900px;">
+                    <thead style="background:rgba(255,255,255,0.03); color:var(--gray); font-size:11px; text-transform:uppercase; letter-spacing:1px; font-weight:700;">
+                        <tr>
+                            <th style="padding:16px; border-bottom:1px solid var(--border);">Date</th>
+                            <th style="padding:16px; border-bottom:1px solid var(--border);">Payment Hub / Origin</th>
+                            <th style="padding:16px; border-bottom:1px solid var(--border);">Category</th>
+                            <th style="padding:16px; border-bottom:1px solid var(--border); text-align:right;">Txn Volume</th>
+                            <th style="padding:16px; border-bottom:1px solid var(--border); text-align:right;">🟡 ETF Built & Rewards</th>
+                            <th style="padding:16px; border-bottom:1px solid var(--border); text-align:right;">Remaining Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabular-ledger">
+                        <!-- Javascript will inject here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const formatCur = (v) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v);
+    
+    let yieldChartInstance = null;
+
+    window.runMLAnalyzer = async () => {
+        const btn = document.querySelector('.btn-run');
+        const empty = document.getElementById('empty-state');
+        const dash = document.getElementById('dashboard-view');
+        
+        btn.innerHTML = `<span style="animation:pulse 1s infinite;">Running Model...</span>`;
+        btn.style.opacity = '0.7';
+        btn.disabled = true;
+        
+        try {
+            const res = await fetch('/api/analyze-statement', { method: 'POST' });
+            const data = await res.json();
+            
+            if(data.success) {
+                const analysis = data.analysis;
+                
+                // Set Top Metrics
+                document.getElementById('m-spend').innerText = formatCur(analysis.total_spent);
+                document.getElementById('m-txn').innerText = analysis.transactions;
+                document.getElementById('m-generated').innerText = formatCur(analysis.cashback_journey.current_value);
+                
+                // ETF Projections Engine (Wired to High-Impact Step-up SIP Backend)
+                const cj = analysis.cashback_journey;
+                document.getElementById('etf-invested').innerText = formatCur(cj.current_value);
+                document.getElementById('etf-1y').innerText = formatCur(cj.fv_1y);
+                document.getElementById('etf-3y').innerText = formatCur(cj.fv_3y);
+                document.getElementById('etf-10y').innerText = formatCur(cj.fv_10y);
+                
+                // Render Clustering Map
+                const cContainer = document.getElementById('clusters-container');
+                cContainer.innerHTML = '';
+                const maxCatAmt = Math.max(...Object.values(analysis.categories));
+                const colors = ['#f43f5e', '#a855f7', '#3b82f6', '#10b981', '#f97316'];
+                let i = 0;
+                for(const [cat, amt] of Object.entries(analysis.categories)) {
+                    const pct = ((amt/analysis.total_spent)*100).toFixed(1);
+                    const barW = ((amt/maxCatAmt)*100);
+                    const col = colors[i % colors.length];
+                    cContainer.innerHTML += `
+                        <div class="cluster-item">
+                            <div style="flex:1; padding-right:20px;">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                                    <div style="font-weight:600; font-size:14px; color:#fff;">${cat}</div>
+                                    <div style="font-family:'Outfit'; font-weight:700; color:var(--gray);">${pct}%</div>
+                                </div>
+                                <div class="c-bar-bg"><div class="c-bar-fill" style="width:${barW}%; background:${col};"></div></div>
+                            </div>
+                            <div style="font-family:'Outfit'; font-size:18px; font-weight:700; width:100px; text-align:right;">${formatCur(amt)}</div>
+                        </div>
+                    `;
+                    i++;
+                }
+                
+                // Build Interactive Searchable Tabular Ledger
+                window.allTimelineData = analysis.timeline.reverse();
+                renderTable(window.allTimelineData);
+                
+                // For the chart, we only want spends
+                const spends = window.allTimelineData.filter(t => t.type === 'SPEND');
+                
+                // Render Sweep Routing (Where it is going)
+                const sweep = analysis.smart_sweep;
+                const rPanel = document.getElementById('route-panel');
+                if(sweep) {
+                    document.getElementById('sweep-badge').innerText = sweep.tagline;
+                    document.getElementById('sweep-badge').style.color = sweep.color;
+                    document.getElementById('sweep-badge').style.backgroundColor = sweep.color + '25';
+                    
+                    document.getElementById('sweep-route').innerText = sweep.route;
+                    document.getElementById('sweep-desc').innerText = sweep.description;
+                    document.getElementById('sweep-fv').innerText = formatCur(analysis.cashback_journey.future_value_3_years);
+                    
+                    rPanel.style.borderColor = sweep.color + '60';
+                    rPanel.querySelector('.glow-bg').style.background = sweep.color;
+                }
+                
+                // Render Cumulative Graph (Chart.js)
+                const ctx = document.getElementById('yieldChart').getContext('2d');
+                if(yieldChartInstance) yieldChartInstance.destroy();
+                
+                // Build array of cumulative wealth point
+                const labels = spends.map((_, idx) => `TXN ${idx+1}`).reverse(); // Left to right
+                const cumulativePoints = spends.map(t => t.cumulative_wealth).reverse();
+                
+                const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+                gradient.addColorStop(0, 'rgba(16, 185, 129, 0.4)');
+                gradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+                
+                yieldChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Extracted Wealth',
+                            data: cumulativePoints,
+                            borderColor: '#10b981',
+                            borderWidth: 2,
+                            backgroundColor: gradient,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { display: false },
+                            y: { 
+                                display: true, 
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: { color: '#a1a1aa', font: {family: 'Outfit'} }
+                            }
+                        }
+                    }
+                });
+                
+                empty.style.display = 'none';
+                dash.style.display = 'block';
+                btn.style.display = 'none';
+                
+            } else {
+                alert("Model Error: " + data.error);
+                btn.innerHTML = 'Retry Logic';
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            }
+        } catch(e) {
+            console.error(e);
+            alert("Network/Model Sync Failed.");
+            btn.innerHTML = 'Retry Logic';
+            btn.disabled = false;
+            btn.style.opacity = '1';
+        }
+    };
+
+    window.renderTable = (dataArray) => {
+        const tbody = document.getElementById('tabular-ledger');
+        let html = '';
+        dataArray.forEach(t => {
+            const isSpend = t.type === 'SPEND';
+            const cat = isSpend ? t.category.toUpperCase() : 'INCOME';
+            const catColor = isSpend ? 'var(--dark-gray)' : 'var(--green)';
+            
+            // Format amounts
+            const amountStr = isSpend ? `<span style="color:var(--white);">- ₹${t.amount.toFixed(2)}</span>` 
+                                      : `<span style="color:var(--green);">+ ₹${t.amount.toFixed(2)}</span>`;
+                                      
+            const cashbackStr = isSpend ? `<div style="display:flex; flex-direction:column; align-items:flex-end;">
+                                            <span class="cb-tag" style="background:rgba(249,115,22,0.15); color:var(--orange);">+ ₹${t.benefit_generated.toFixed(2)} 🟡 ETF</span>
+                                            <span style="font-size:11px; margin-top:4px; color:var(--purple); font-weight:700;">+ ${t.reward_coins} Flux Coins</span>
+                                           </div>`
+                                        : `<span style="color:var(--gray);">-</span>`;
+            
+            const balStr = t.balance ? `₹${t.balance.toFixed(2)}` : 'N/A';
+
+            html += `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.03); transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                    <td style="padding:16px; color:var(--gray);">${t.date}</td>
+                    <td style="padding:16px; font-weight:500; max-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${t.desc}">${t.desc}</td>
+                    <td style="padding:16px; font-size:11px; font-weight:800; color:${catColor};">${cat}</td>
+                    <td style="padding:16px; font-family:'Outfit'; font-weight:600; text-align:right;">${amountStr}</td>
+                    <td style="padding:16px; text-align:right;">${cashbackStr}</td>
+                    <td style="padding:16px; font-family:'Outfit'; font-weight:700; color:var(--gray); text-align:right;">${balStr}</td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    };
+
+    window.filterLedger = () => {
+        const query = document.getElementById('txSearch').value.toLowerCase();
+        if (!window.allTimelineData) return;
+        const filtered = window.allTimelineData.filter(t => {
+            const d = t.desc.toLowerCase();
+            const c = (t.category || t.type).toLowerCase();
+            return d.includes(query) || c.includes(query);
+        });
+        renderTable(filtered);
+    };
+</script>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/annyang/2.6.1/annyang.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="global-voice.js"></script>
+</body>
+</html>

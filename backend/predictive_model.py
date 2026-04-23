@@ -5,16 +5,21 @@ def generate_expense_forecast(expense_data):
     Real Prediction (Simple ML via mathematical regression).
     Predicts next 7 days based on moving averages and trend, avoiding over-complexity and pip failures.
     """
-    if not expense_data or len(expense_data) < 3:
+    if not expense_data:
         # Not enough data, return mock trend
         return {
-            "forecast": [{"date": "Next Day", "predicted_amount": 0}],
-            "insight": "Need more data to generate a reliable forecasting model.",
-            "weekend_spender": False
+            "forecast": [{"day_offset": 1, "predicted_amount": 0}],
+            "insight": "Add at least one expense to unlock AI forecasting.",
+            "weekend_spender": False,
+            "trend": "stable",
+            "completion_probability": "0%"
         }
 
     amounts = [d['daily_total'] for d in expense_data]
     
+    if len(amounts) == 1:
+        amounts.append(amounts[0] * 0.95)
+
     # Simple Linear Regression (y = mx + c) calculated manually for zero dependencies
     x = np.arange(len(amounts))
     y = np.array(amounts)

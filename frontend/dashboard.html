@@ -95,10 +95,12 @@
     <div style="font-weight:700; font-size:20px;">Flux</div>
   </a>
   <div class="nav-center">
+    <a href="smart-analyzer.html" class="nav-link" style="color:#10b981; font-weight:800;">Statement AI 🚀</a>
     <a href="dashboard.html" class="nav-link active">Dashboard</a>
-    <a href="flux-card.html" class="nav-link">Flux Card</a>
-    <a href="analytics.html" class="nav-link">Analytics</a>
-    <a href="goals.html" class="nav-link">Goals</a>
+    <a href="arena.html" class="nav-link" style="color:var(--orange2); font-weight:800;">Arena 🎮</a>
+    <a href="analytics_overview.html" class="nav-link" style="color:var(--orange);">Master Analytics 📊</a>
+    <a href="insurance.html" class="nav-link">Insurance</a>
+    <a href="payments.html" class="nav-link">Flux Pay</a>
   </div>
   <div class="nav-right">
     <div class="nav-user"></div>
@@ -107,12 +109,17 @@
 </nav>
 
 <div class="main">
+  <div style="margin-bottom: 24px;">
+    <h1 style="font-size: 32px; font-weight: 900; letter-spacing: -1.5px; margin-bottom: 4px;">Welcome to Flux AI, <span id="welcome-name" style="background: linear-gradient(135deg, var(--blue), var(--cyan)); -webkit-background-clip: text; color: transparent;">User</span> 👋</h1>
+    <p style="color: var(--gray); font-size: 15px;">Your autonomous wealth engine is active and optimizing your trajectory.</p>
+  </div>
   <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom: 24px;">
      <div style="display:flex; align-items:center; gap:8px; background:rgba(37,99,235,0.1); border:1px solid rgba(37,99,235,0.3); padding:8px 16px; border-radius:20px; font-size:12px; font-weight:600; color:var(--blue);">
        <div style="width:8px; height:8px; background:var(--blue); border-radius:50%; box-shadow:0 0 8px var(--blue); animation:pulse 2s infinite;"></div>
        E2E Encrypted Cloud Sync Active
      </div>
      <div style="display:flex; gap:16px;">
+       <a href="analytics_overview.html" style="background:rgba(37,99,235,0.1); border:1px solid var(--blue); color:var(--blue); padding:10px 20px; border-radius:12px; text-decoration:none; font-size:13px; font-weight:700;">📊 Flux Master Analytics</a>
        <a href="/api/export-report" target="_blank" style="background:var(--card); border:1px solid var(--purple); color:white; padding:10px 20px; border-radius:12px; text-decoration:none; font-size:13px; font-weight:700;">📄 Export Monthly PDF Report</a>
        <a href="save-now.html" onclick="return requireAuth(event, 'save-now.html')" style="background:linear-gradient(135deg,var(--green2),#10b981); color:#000; padding:10px 20px; border-radius:12px; text-decoration:none; font-size:13px; font-weight:800; box-shadow:0 5px 15px rgba(16,185,129,0.3);">⚡ Trigger Smart Save</a>
      </div>
@@ -351,10 +358,98 @@
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
 <script src="app.js"></script>
+
+  <!-- CASHBACK JOURNEY SIMULATOR -->
+  <div class="dashboard-row row-1" style="margin-top: 24px; margin-bottom: 24px;">
+    <div class="dash-card" style="background: linear-gradient(135deg, rgba(16,185,129,0.05), #12121e); border-color: rgba(16,185,129,0.3);">
+      <div class="card-title" style="color: #34d399; font-size:16px;">💸 AI Statement Analyzer & Cashback Simulator</div>
+      <div style="font-size: 13px; color: var(--gray); margin-bottom: 20px; line-height: 1.5;">
+        Extract transactions from your bank CSV and watch Flux intelligently reroute the cashback and optimized spending into compounded ETF assets in real-time.
+      </div>
+      <div style="display:flex; gap: 16px; align-items:center; flex-wrap:wrap;">
+          <input type="file" id="csv-upload" accept=".csv" style="display:none;" onchange="handleStatementUpload(this)">
+          <button onclick="document.getElementById('csv-upload').click()" style="background:transparent; color:var(--gray); border:1px solid var(--border); padding:10px 16px; border-radius:12px; font-weight:600; cursor:pointer;">
+            Upload CSV Custom
+          </button>
+          <button id="run-btn" onclick="runSimulation()" style="background:linear-gradient(135deg, #10b981, #059669); color:white; border:none; padding:12px 24px; border-radius:12px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:8px; box-shadow: 0 10px 20px rgba(16,185,129,0.2);">
+            <span style="font-size:18px;">🚀</span> Run AI Analyzer & Simulator
+          </button>
+      </div>
+
+      <div id="analyzer-results" style="display:none; margin-top:24px;">
+          <div style="display:flex; gap:16px; flex-wrap:wrap;">
+               <div style="background:rgba(124,92,191,0.2); padding:16px; border-radius:12px; border:1px solid rgba(124,92,191,0.5); flex:1;">
+                   <div style="color:#dfa4ff; font-size:11px; text-transform:uppercase; letter-spacing:1px; font-weight:700;">Total Spending Analysed</div>
+                   <div id="res-spent" style="font-size:32px; font-weight:900; color:white; margin-top:4px;">₹0</div>
+               </div>
+               <div style="background:rgba(52,211,153,0.2); padding:16px; border-radius:12px; border:1px solid rgba(52,211,153,0.5); flex:1;">
+                   <div style="color:#34d399; font-size:11px; text-transform:uppercase; letter-spacing:1px; font-weight:700;">Total Passive Wealth Generated</div>
+                   <div id="res-wealth" style="font-size:32px; font-weight:900; color:#34d399; margin-top:4px;">+ ₹0</div>
+               </div>
+          </div>
+          
+          <div style="margin-top:24px; overflow-x:auto;">
+              <table style="width:100%; text-align:left; font-size:13px; color:var(--gray); min-width:600px;">
+                 <thead>
+                    <tr style="border-bottom:1px solid var(--border);">
+                       <th style="padding:12px;">Date / Origin</th>
+                       <th style="padding:12px;">Description</th>
+                       <th style="padding:12px;">Amount Deducted</th>
+                       <th style="padding:12px; color:#f59e0b;">Wealth/Cashback Intercepted</th>
+                    </tr>
+                 </thead>
+                 <tbody id="sim-tbody"></tbody>
+              </table>
+          </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
+  const formatAmt = (v) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(v);
+  window.runSimulation = async () => {
+      const btn = document.getElementById("run-btn");
+      btn.innerHTML = "Computing AI Extractor...";
+      try {
+          const res = await fetch("/api/analyze-statement", { method: "POST" });
+          const data = await res.json();
+          if(data.success) {
+              document.getElementById("analyzer-results").style.display = "block";
+              document.getElementById("res-spent").innerText = formatAmt(data.analysis.total_spent);
+              document.getElementById("res-wealth").innerHTML = "+ " + formatAmt(data.analysis.cashback_journey.current_value) + " <span style=\"font-size:14px; font-weight:600; color:#10b981;\">(Profit: +₹" + data.analysis.cashback_journey.real_market_profit + ")</span>";
+              
+              const tbody = document.getElementById("sim-tbody");
+              tbody.innerHTML = data.analysis.timeline.map(t => {
+                  return `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                      <td style="padding:12px; color:var(--gray);"><b>${t.date}</b></td>
+                      <td style="padding:12px; color:white; font-weight:600;">${t.desc}</td>
+                      <td style="padding:12px; color:#ef4444;">- ₹${t.amount.toFixed(2)}</td>
+                      <td style="padding:12px; font-weight:800; color:#f59e0b;">
+                          + ₹${(t.benefit_generated || 0).toFixed(2)} 🟡 ETF <br>
+                          <span style="font-size:11px; color:#9b79e0;">+ ${(t.reward_coins || 0).toFixed(0)} Flux Coins</span>
+                      </td>
+                  </tr>`;
+              }).join("");
+              btn.innerHTML = `<span style="font-size:18px;">✅</span> Feature Execution Complete`;
+          }
+      } catch(e) {
+          console.error(e);
+          btn.innerHTML = "Error Fetching Data";
+      }
+  };
+</script>
+<script>
+
 document.addEventListener('DOMContentLoaded', async () => {
   await initAppPromise;
   const dashboard = await getDashboard();
+  
+  // Set welcome name
+  const user = appState.user;
+  if(user && user.name) {
+    document.getElementById('welcome-name').innerText = user.name.split(' ')[0];
+  }
   
   // Extract data
   let score = dashboard.score || 0;
@@ -431,5 +526,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 </script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/annyang/2.6.1/annyang.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="global-voice.js"></script>
 </body>
 </html>

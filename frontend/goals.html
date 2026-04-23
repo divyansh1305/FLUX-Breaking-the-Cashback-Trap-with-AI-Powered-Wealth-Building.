@@ -265,7 +265,9 @@
          if(isNaN(amt) || amt <= 0) return alert("Enter a valid amount to fund.");
          
          if (current + amt > target) {
-             amt = target - current; // Cap the funding to complete the goal perfectly
+             const leftAmount = target - current;
+             alert(`Amount exceeds total goal! You only need ₹${leftAmount} to complete this goal.`);
+             return; 
          }
          
          const msg = document.getElementById(`fund-msg-${id}`);
@@ -291,5 +293,9 @@
   });
 </script>
 <script src="app.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/annyang/2.6.1/annyang.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="global-voice.js"></script>
 </body>
 </html>

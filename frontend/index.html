@@ -201,7 +201,7 @@
 </head>
 <body>
 
-<nav class="navbar">
+<nav class="navbar" id="main-navbar">
   <a href="index.html" class="nav-brand">
     <div class="nav-logo">⚡</div>
     <div>
@@ -210,19 +210,26 @@
     </div>
   </a>
   <div class="nav-center">
-    <a href="dashboard.html" class="nav-link">Dashboard</a>
-    <a href="flux-card.html" class="nav-link">Flux Card</a>
-    <a href="analytics.html" class="nav-link">Analytics</a>
-    <a href="goals.html" class="nav-link">Goals</a>
+    <a href="dashboard.html" class="nav-link">AI Engine</a>
+    <a href="arena.html" class="nav-link" style="color:var(--orange2); font-weight:700;">Arena 🎮</a>
+    <a href="insurance.html" class="nav-link premium-link">Insurance 🔒</a>
+    <a href="markets.html" class="nav-link premium-link">Markets 🔒</a>
+    <a href="payments.html" class="nav-link">Pay/Wallet</a>
   </div>
   <div class="nav-right">
-    <div class="nav-user">
-      <div class="avatar">JD</div>
-      <span>John</span>
+    <a href="flux-pro.html" id="nav-upgrade-btn" class="pro-badge" style="text-decoration:none; margin-right:10px;">★ Unlock Pro</a>
+    <div class="nav-user" id="nav-user-info">
+      <div class="avatar" id="user-initials">U</div>
+      <span id="user-display-name">User</span>
     </div>
     <a href="logout.html" class="btn-logout">Log out</a>
   </div>
 </nav>
+
+<style>
+  .premium-link { position: relative; }
+  .premium-link::after { content: 'PRO'; font-size: 8px; position: absolute; top: 0; right: 0; background: var(--orange); color: black; padding: 1px 4px; border-radius: 4px; font-weight: 800; transform: translateY(-30%); }
+</style>
 
 <div class="main">
   <section class="hero-section">
@@ -769,5 +776,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 </script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/annyang/2.6.1/annyang.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="global-voice.js"></script>
 </body>
 </html>

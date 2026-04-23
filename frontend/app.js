@@ -11,11 +11,72 @@ async function initApp() {
     const res = await fetch('/api/user');
     if (res.ok) {
       appState.user = await res.json();
+      
+      // Global Activity Monitoring: Log page transitions in SQLite
+      const path = window.location.pathname.split('/').pop() || 'index.html';
+      if (!path.includes('login') && !path.includes('logout') && !path.includes('onboarding')) {
+          fetch('/api/log-action', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  action: "NAVIGATED",
+                  description: `Viewed ${path}`
+              })
+          }).catch(() => {});
+      }
     } else {
       appState.user = null;
     }
   } catch (e) {
     appState.user = null;
+  }
+
+  // GLOBAL PRO ROUTE GUARD
+  const lockedPages = ['markets.html', 'insurance.html', 'payments.html', 'tax.html', 'simulator.html', 'will.html'];
+  const curPage = window.location.pathname.split('/').pop();
+  
+  if (lockedPages.includes(curPage)) {
+      if (!appState.user || !appState.user.is_pro) {
+          const overlay = document.createElement('div');
+          overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(8,8,15,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:999999;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.4s ease;";
+          
+          const modal = document.createElement('div');
+          modal.style.cssText = "background:linear-gradient(145deg, rgba(24,24,40,0.95), rgba(18,18,30,0.95));border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:40px;max-width:420px;width:90%;text-align:center;box-shadow:0 30px 60px rgba(0,0,0,0.7);transform:translateY(30px) scale(0.95);transition:all 0.4s cubic-bezier(0.16, 1, 0.3, 1);";
+          
+          modal.innerHTML = `
+            <div style="background:linear-gradient(135deg, #fbbf24, #f59e0b);width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;box-shadow:0 0 30px rgba(251,191,36,0.4);">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            </div>
+            <h2 style="color:white;font-size:28px;font-weight:800;margin:0 0 12px;font-family:'Inter',sans-serif;">Unlock Flux PRO</h2>
+            <p style="color:#8888aa;font-size:15px;line-height:1.6;margin:0 0 32px;font-family:'Inter',sans-serif;">This feature is locked. To enable this feature, unlock Flux PRO and get full access.</p>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <button id="btn-unlock-pro" style="background:#e8491d;border:none;color:white;padding:16px 24px;border-radius:16px;font-size:16px;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:'Inter',sans-serif;box-shadow:0 4px 15px rgba(232,73,29,0.3);">Buy Flux PRO</button>
+              <button id="btn-cancel-pro-lock" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#8888aa;padding:16px 24px;border-radius:16px;font-size:16px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:'Inter',sans-serif;">No, Thanks</button>
+            </div>
+          `;
+          
+          overlay.appendChild(modal);
+          document.body.appendChild(overlay);
+          
+          // Animate in
+          requestAnimationFrame(() => {
+            overlay.style.opacity = '1';
+            modal.style.transform = 'translateY(0) scale(1)';
+          });
+          
+          // Hover effects
+          const btnUnlock = modal.querySelector('#btn-unlock-pro');
+          const btnMaybe = modal.querySelector('#btn-cancel-pro-lock');
+          
+          btnUnlock.onmouseover = () => btnUnlock.style.background = '#ff5722';
+          btnUnlock.onmouseout = () => btnUnlock.style.background = '#e8491d';
+          btnMaybe.onmouseover = () => { btnMaybe.style.background = 'rgba(255,255,255,0.05)'; btnMaybe.style.color = '#fff'; };
+          btnMaybe.onmouseout = () => { btnMaybe.style.background = 'transparent'; btnMaybe.style.color = '#8888aa'; };
+          
+          // Actions
+          btnUnlock.onclick = () => window.location.href = 'flux-pro.html';
+          btnMaybe.onclick = () => window.location.href = 'index.html';
+      }
   }
 }
 
@@ -48,11 +109,12 @@ async function requireAuth(event, url) {
 // Transactions
 async function addExpense(category, amount) {
   try {
-    await fetch('/add-expense', {
+    const res = await fetch('/add-expense', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ category, amount })
     });
+    return await res.json();
   } catch(e) {
     console.error("Error adding expense", e);
   }
@@ -162,21 +224,160 @@ async function getInsights() {
   return { insight: "" };
 }
 
+// Global Cancel PRO method so it works on all pages
+window.cancelProSubscription = async function() {
+    try {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(8,8,15,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:999999;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.4s ease;";
+        
+        const modal = document.createElement('div');
+        modal.style.cssText = "background:linear-gradient(145deg, rgba(24,24,40,0.95), rgba(18,18,30,0.95));border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:40px;max-width:420px;width:90%;text-align:center;box-shadow:0 30px 60px rgba(0,0,0,0.7);transform:translateY(30px) scale(0.95);transition:all 0.4s cubic-bezier(0.16, 1, 0.3, 1);";
+        
+        modal.innerHTML = `
+          <div style="background:rgba(239,68,68,0.1);color:#ef4444;width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:32px;border:2px solid #ef4444;">
+            !
+          </div>
+          <h2 style="color:white;font-size:28px;font-weight:800;margin:0 0 12px;font-family:'Inter',sans-serif;">Cancel Pro?</h2>
+          <p id="cancel-status-text" style="color:#8888aa;font-size:15px;line-height:1.6;margin:0 0 24px;font-family:'Inter',sans-serif;">Sending a secure 6-digit verification code to your email...</p>
+          <div id="otp-container" style="display:none;flex-direction:column;gap:16px;">
+            <input type="text" id="cancelOtpInput" placeholder="●●●●●●" maxlength="6" style="
+              width: 100%; max-width: 240px; margin: 0 auto; display: block;
+              background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.12);
+              color: white; padding: 18px; border-radius: 16px; 
+              font-size: 32px; font-weight: 700; letter-spacing: 12px; 
+              text-align: center; outline: none; transition: 0.2s;
+              box-sizing: border-box; font-family:'Inter', sans-serif;
+            " onfocus="this.style.borderColor='#e8491d'; this.style.boxShadow='0 0 0 4px rgba(232,73,29,0.15)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'; this.style.boxShadow='none'">
+            <button id="btn-verify-cancel" style="background:#e8491d;border:none;color:white;padding:16px 24px;border-radius:16px;font-size:16px;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:'Inter',sans-serif;box-shadow:0 4px 15px rgba(232,73,29,0.3);">Verify & Revoke</button>
+          </div>
+          <button id="btn-keep-pro" style="background:transparent;border:none;color:#8888aa;text-decoration:underline;padding:12px;font-size:14px;cursor:pointer;font-family:'Inter',sans-serif;margin-top:12px;">Keep Pro Account</button>
+        `;
+        
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        
+        requestAnimationFrame(() => {
+          overlay.style.opacity = '1';
+          modal.style.transform = 'translateY(0) scale(1)';
+        });
+        
+        const btnKeep = modal.querySelector('#btn-keep-pro');
+        const btnVerify = modal.querySelector('#btn-verify-cancel');
+        const otpContainer = modal.querySelector('#otp-container');
+        const statusText = modal.querySelector('#cancel-status-text');
+        const otpInput = modal.querySelector('#cancelOtpInput');
+        
+        btnKeep.onclick = () => {
+          overlay.style.opacity = '0';
+          setTimeout(() => overlay.remove(), 400);
+        };
+
+        const req = await fetch('/api/send-cancel-otp', { method: 'POST' });
+        if (!req.ok) {
+            statusText.innerText = "Error requesting OTP. Please try again later.";
+            statusText.style.color = "#ef4444";
+            return;
+        }
+
+        const reqData = await req.json();
+
+        statusText.innerText = "We sent a 6-digit code to your email. Enter it below to downgrade your account.";
+        otpContainer.style.display = "flex";
+        otpInput.focus();
+
+        if (reqData.otp) {
+            alert("Demo Mode: Your Cancel OTP is " + reqData.otp);
+            otpInput.value = reqData.otp;
+        }
+
+        btnVerify.onclick = async () => {
+            const otp = otpInput.value.trim();
+            if (!otp || otp.length !== 6) {
+                otpInput.style.borderColor = '#ef4444';
+                return;
+            }
+            
+            btnVerify.innerText = "Processing...";
+            btnVerify.disabled = true;
+
+            try {
+                const res = await fetch('/api/cancel-pro', { 
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ otp: otp })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    statusText.innerText = "Your Flux Pro subscription has been cancelled.";
+                    statusText.style.color = "#10b981";
+                    otpContainer.style.display = "none";
+                    btnKeep.style.display = "none";
+                    
+                    modal.innerHTML = `
+                        <div style="background:rgba(16,185,129,0.1);color:#10b981;width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:32px;border:2px solid #10b981;">✔</div>
+                        <h2 style="color:white;font-size:28px;font-weight:800;margin:0 0 12px;font-family:'Inter',sans-serif;">Access Revoked</h2>
+                        <p style="color:#8888aa;font-size:15px;line-height:1.6;margin:0 0 24px;font-family:'Inter',sans-serif;">Your Flux Pro subscription has been securely cancelled.</p>
+                        <button onclick="window.location.reload()" style="background:#10b981;border:none;color:white;padding:16px 24px;border-radius:16px;font-size:16px;font-weight:700;cursor:pointer;width:100%;">Continue</button>
+                    `;
+                } else {
+                    statusText.innerText = data.error || 'The OTP code was incorrect.';
+                    statusText.style.color = "#ef4444";
+                    btnVerify.innerText = "Verify & Revoke";
+                    btnVerify.disabled = false;
+                }
+            } catch(e) {
+                statusText.innerText = "Connection error.";
+                btnVerify.innerText = "Verify & Revoke";
+                btnVerify.disabled = false;
+            }
+        };
+
+    } catch (e) { console.error(e); }
+};
+
 // Update Nav User UI globally
 function updateNavUI() {
   const navUser = document.querySelector('.nav-user');
   const navRight = document.querySelector('.nav-right');
+  const isPro = appState.user && appState.user.is_pro;
   
   if (!navRight) return;
 
   if (isLoggedIn()) {
+    // Inject Cancel Pro button if pro
+    if (isPro) {
+      let cancelBtn = document.querySelector('.btn-cancel-pro');
+      if (!cancelBtn) {
+        cancelBtn = document.createElement('a');
+        cancelBtn.href = "#";
+        cancelBtn.className = "btn-cancel-pro";
+        cancelBtn.style.cssText = "background:rgba(239,68,68,0.1); border:1px solid #ef4444; color:#ef4444; padding:6px 14px; border-radius:20px; font-weight:700; font-size:12px; text-decoration:none; margin-right:8px;";
+        cancelBtn.innerText = "✖ Cancel Pro";
+        cancelBtn.onclick = (e) => { e.preventDefault(); cancelProSubscription(); };
+        navRight.prepend(cancelBtn);
+      }
+    }
+
     if(navUser) {
       navUser.style.display = 'flex';
       const nameStr = appState.user?.name || "User";
       const initials = nameStr.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
       const shortName = nameStr.split(' ')[0];
-      navUser.innerHTML = `<a href="profile.html" style="text-decoration:none; display:flex; align-items:center; gap:10px; color:white;"><div class="avatar" style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,var(--purple),var(--blue)); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600;">${initials}</div><span>${shortName}</span></a>`;
+      
+      if (isPro) {
+          navUser.innerHTML = `<a href="profile.html" style="text-decoration:none; display:flex; align-items:center; gap:10px; color:white;"><div class="avatar" style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,#fbbf24,#f59e0b); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; color:#000; box-shadow: 0 0 10px rgba(251,191,36,0.4);">PR</div><span>${shortName} <span style="font-size:10px;color:#fbbf24;font-weight:700;">PRO</span></span></a>`;
+      } else {
+          navUser.innerHTML = `<a href="profile.html" style="text-decoration:none; display:flex; align-items:center; gap:10px; color:white;"><div class="avatar" style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,var(--purple),var(--blue)); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600;">${initials}</div><span>${shortName}</span></a>`;
+      }
     }
+    
+    // Convert all "★ Upgrade Pro" buttons to "✔ PRO Active" globally
+    document.querySelectorAll('a').forEach(btn => {
+        if (isPro && btn.href.includes('flux-pro.html') && btn.textContent.includes('Upgrade')) {
+            btn.outerHTML = '<span style="background:rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color:#10b981; padding:6px 14px; border-radius:20px; font-weight:700; font-size:12px; display:inline-flex; align-items:center; gap:4px;"><span style="font-size:14px;">✔</span> PRO Active</span>';
+        }
+    });
     
     let logoutBtn = document.querySelector('.btn-logout');
     if (!logoutBtn) {
@@ -416,8 +617,24 @@ function injectChatWidget() {
 
       const botMsg = document.createElement('div');
       botMsg.className = 'chat-msg bot';
-      botMsg.textContent = data.reply || "I couldn't process that. Try again!";
+      const replyText = data.reply || "I couldn't process that. Try again!";
+      botMsg.textContent = replyText;
       messages.appendChild(botMsg);
+      
+      // Speak the reply out loud for the Voice Chatbot experience!
+      if ('speechSynthesis' in window && replyText) {
+        window.speechSynthesis.cancel(); // Cancel any ongoing speech
+        const utterance = new SpeechSynthesisUtterance(replyText);
+        
+        const voices = window.speechSynthesis.getVoices();
+        let voice = voices.find(v => v.name.includes("Google US English") || v.name.includes("Samantha"));
+        if (!voice) voice = voices.find(v => v.lang.startsWith("en"));
+        if (voice) utterance.voice = voice;
+        
+        utterance.rate = 1.05;
+        window.speechSynthesis.speak(utterance);
+      }
+      
     } catch(e) {
       typing.remove();
       const errMsg = document.createElement('div');
@@ -445,8 +662,8 @@ function injectChatWidget() {
       input.value = transcript;
       micBtn.classList.remove('recording');
       
-      // Do not auto-send! Let the user review and edit their voice input (English/Hindi) before clicking send.
-      input.focus();
+      // Auto-send the voice command immediately to feel like a real conversational chatbot!
+      sendMessage();
     };
     recognition.onerror = (e) => {
       console.error("Speech recognition error", e);
