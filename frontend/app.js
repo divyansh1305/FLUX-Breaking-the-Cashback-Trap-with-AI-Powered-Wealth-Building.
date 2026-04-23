@@ -590,6 +590,8 @@ function injectChatWidget() {
   async function sendMessage() {
     const text = input.value.trim();
     if (!text) return;
+    // Disable send button to prevent duplicate submissions
+    sendBtn.disabled = true;
 
     // Add user message
     const userMsg = document.createElement('div');

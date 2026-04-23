@@ -521,6 +521,15 @@ def cancel_pro():
 
 # --- DATA API ENDPOINTS (SQLite) ---
 
+DEMO_CSV = """Date,Narration,Chq./Ref. No.,Value Dt,Withdrawal Amt.,Deposit Amt.,Closing Balance
+01/01/24,ZOMATO FOOD ORDER,UPI-1234,01/01/24,450.00,,50000.00
+05/01/24,AMAZON SHOPPING,UPI-5678,05/01/24,2500.00,,47500.00
+10/01/24,SALARY CREDIT,NEFT-999,10/01/24,,85000.00,132500.00
+15/01/24,UBER TRIP,UPI-000,15/01/24,320.00,,132180.00
+20/01/24,NETFLIX SUBSCRIPTION,CARD-111,20/01/24,649.00,,131531.00
+25/01/24,SWIGGY ORDER,UPI-222,25/01/24,580.00,,130951.00
+"""
+
 @app.route("/api/analyze-statement", methods=["POST"])
 @login_required
 def analyze_statement_api():
@@ -529,7 +538,9 @@ def analyze_statement_api():
         csv_content = file.read().decode('utf-8')
         result = parse_and_analyze_statement(csv_content=csv_content, user_id=session["user_id"])
     else:
-        return jsonify({"success": False, "error": "No statement file uploaded. Please upload your bank statement CSV to begin analysis."}), 400
+        # FALLBACK: Use Demo CSV if no file is provided for the 'one-shot' demo experience
+        result = parse_and_analyze_statement(csv_content=DEMO_CSV, user_id=session["user_id"])
+
         
     if result.get("status") == "success":
         return jsonify({"success": True, "analysis": result["data"]}), 200

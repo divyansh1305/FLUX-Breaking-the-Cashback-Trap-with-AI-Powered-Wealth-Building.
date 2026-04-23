@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Login - Flux</title>
+  <title>FLUX</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -100,8 +100,8 @@
 
   <div class="logo-header">
     <div class="nav-logo">⚡</div>
-    <h1 class="title" id="mainTitle">Join Flux</h1>
-    <p class="subtitle" id="subTitle">Enter your email to initiate your wealth engine.</p>
+    <h1 class="title" id="mainTitle">Join FLUX</h1>
+    <p class="subtitle" id="subTitle">Simplicity in Wealth.</p>
   </div>
 
   <div class="error-msg" id="errorMsg"></div>
@@ -175,7 +175,7 @@
         document.getElementById('step1').classList.add('hidden');
         document.getElementById('step2').classList.remove('hidden');
         document.getElementById('mainTitle').innerText = "Create Account";
-        document.getElementById('subTitle').innerText = "Join the gamified wealth engine.";
+        document.getElementById('subTitle').innerText = "Simplicity in Wealth.";
         document.getElementById('nameInput').focus();
       } else if (data.success) {
         document.getElementById('step1').classList.add('hidden');
@@ -260,8 +260,8 @@
     
     if (step === 1) {
       document.getElementById('step1').classList.remove('hidden');
-      document.getElementById('mainTitle').innerText = "Join Flux";
-      document.getElementById('subTitle').innerText = "Enter your email to initiate your wealth engine.";
+      document.getElementById('mainTitle').innerText = "Join FLUX";
+      document.getElementById('subTitle').innerText = "Simplicity in Wealth.";
       isSignup = false;
     }
   }
