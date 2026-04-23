@@ -7,21 +7,21 @@ from market_data import get_nifty_data, get_gold_rate, get_stock_info
 # Use simple local logic + Gemini Flash for speed
 try:
     load_dotenv()
+    # Fix for gRPC issues on some live environments (like Render/Heroku)
+    os.environ["GRPC_DNS_RESOLVER"] = "native"
+    
     import google.generativeai as genai
     api_key = os.environ.get("GEMINI_API_KEY") or "AIzaSyBuDk5FjULXBisCiEUuqqztK6bojWHUcS8"
     genai.configure(api_key=api_key)
     
     # Check for working models - Prioritize Gemma if Gemini is hitting quota
-    # Based on diagnostics, gemma-3 models are available and responsive
     working_model_name = 'gemini-1.5-flash'
     try:
-        # Quick check if gemini is responsive
         test_model = genai.GenerativeModel('gemini-1.5-flash')
         test_model.generate_content("test", generation_config={"max_output_tokens": 1})
         working_model_name = 'gemini-1.5-flash'
-    except:
-        # Fallback to Gemma-3 which has separate quota/availability
-        # Prioritize 27b for higher quality "proper" answers
+    except Exception as e:
+        print(f"--- Gemini 1.5 Flash Unavailable: {str(e)} ---")
         for g_name in ['gemma-3-27b-it', 'gemma-3-12b-it', 'gemma-3-4b-it']:
             try:
                 test_g = genai.GenerativeModel(g_name)
@@ -33,9 +33,11 @@ try:
     model = genai.GenerativeModel(working_model_name)
     print(f"--- GHOST AI INITIALIZED WITH: {working_model_name} ---")
     HAS_GENAI = True
+    INIT_ERROR = None
 except Exception as e:
     print(f"--- GHOST AI INIT FAILED: {str(e)} ---")
     HAS_GENAI = False
+    INIT_ERROR = str(e)
 
 def get_voice_agent_response(transcript, state_history="[]"):
     t = transcript.lower().strip()
@@ -118,6 +120,8 @@ def get_voice_agent_response(transcript, state_history="[]"):
             print(f"--- GHOST AI ERROR: {str(e)} ---")
             pass
 
+    if INIT_ERROR:
+        return {"response": f"AI Engine is offline. Error: {INIT_ERROR[:50]}. Please check your API key in Render settings.", "actions": []}
     return {"response": "I'm listening. How can I help you navigate Flux?", "actions": []}
 
 def get_ml_response(message, user_data):
