@@ -188,8 +188,8 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("🦾 GHOST AI AGENTIC CORE ONLINE");
 
     // 3. AUTO-GREETING (Dashboard Only)
-    const isDashboard = window.location.pathname.includes('dashboard.html');
-    if (isDashboard) {
+    const shouldGreet = window.location.pathname.includes('dashboard.html') || window.location.pathname.includes('open.html');
+    if (shouldGreet) {
         setTimeout(() => {
             speak("Welcome to Flux AI. Your autonomous wealth engine is online and ready for optimization.");
         }, 1500);
