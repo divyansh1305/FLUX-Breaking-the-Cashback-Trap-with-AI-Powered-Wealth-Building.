@@ -529,9 +529,7 @@ def analyze_statement_api():
         csv_content = file.read().decode('utf-8')
         result = parse_and_analyze_statement(csv_content=csv_content, user_id=session["user_id"])
     else:
-        # Hackathon simulation mode - read from local backend directory
-        local_path = os.path.join(os.path.dirname(__file__), "statement.csv")
-        result = parse_and_analyze_statement(file_path=local_path, user_id=session["user_id"])
+        return jsonify({"success": False, "error": "No statement file uploaded. Please upload your bank statement CSV to begin analysis."}), 400
         
     if result.get("status") == "success":
         return jsonify({"success": True, "analysis": result["data"]}), 200

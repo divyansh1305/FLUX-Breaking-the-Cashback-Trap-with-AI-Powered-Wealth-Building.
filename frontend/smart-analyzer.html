@@ -102,13 +102,20 @@
 <div class="container">
     <div class="engine-header">
         <h1 class="engine-title">
-            <span>statement.csv Analysis</span>
-            Deep Cashflow Intelligence
+            <span>Statement Intelligence</span>
+            Deep Cashflow Audit
         </h1>
-        <button id="btn-execute-model" class="btn-run" onclick="window.runMLAnalyzer()">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-            Execute Model
-        </button>
+        <div style="display:flex; align-items:center; gap:16px;">
+            <input type="file" id="statement-upload" accept=".csv" style="display:none;" onchange="window.handleFileUpload(this)">
+            <button class="btn-run" style="background:transparent; border:1px solid var(--border); color:var(--white); box-shadow:none;" onclick="document.getElementById('statement-upload').click()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                Upload CSV
+            </button>
+            <button id="btn-execute-model" class="btn-run" onclick="window.runMLAnalyzer()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                Execute Model
+            </button>
+        </div>
     </div>
 
     <!-- Loading State -->
@@ -244,8 +251,23 @@
     
     let yieldChartInstance = null;
 
+    let selectedFile = null;
+
+    window.handleFileUpload = (input) => {
+        if (input.files && input.files[0]) {
+            selectedFile = input.files[0];
+            document.querySelector('.btn-run').innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"></path></svg> ${selectedFile.name}`;
+            document.getElementById('empty-state').querySelector('p').innerText = `File "${selectedFile.name}" ready for injection. Click Execute to begin.`;
+        }
+    };
+
     window.runMLAnalyzer = async () => {
-        const btn = document.querySelector('.btn-run');
+        if (!selectedFile) {
+            alert("Please upload a bank statement CSV first.");
+            return;
+        }
+
+        const btn = document.getElementById('btn-execute-model');
         const empty = document.getElementById('empty-state');
         const dash = document.getElementById('dashboard-view');
         
@@ -253,8 +275,14 @@
         btn.style.opacity = '0.7';
         btn.disabled = true;
         
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
         try {
-            const res = await fetch('/api/analyze-statement', { method: 'POST' });
+            const res = await fetch('/api/analyze-statement', { 
+                method: 'POST',
+                body: formData
+            });
             const data = await res.json();
             
             if(data.success) {

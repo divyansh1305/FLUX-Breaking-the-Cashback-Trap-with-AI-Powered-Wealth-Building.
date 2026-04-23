@@ -23,7 +23,7 @@ def parse_and_analyze_statement(csv_content=None, file_path=None, user_id=None):
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 lines = f.readlines()
         else:
-            return {"status": "error", "message": "No CSV content or valid file path provided. Please place 'statement.csv' in the backend folder."}
+            return {"status": "error", "message": "No CSV content provided. Please upload your bank statement CSV file."}
         
         header_idx = 0
         for i, line in enumerate(lines):

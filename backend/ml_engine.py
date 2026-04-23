@@ -11,11 +11,11 @@ try:
     os.environ["GRPC_DNS_RESOLVER"] = "native"
     
     import google.generativeai as genai
-    api_key = os.environ.get("GEMINI_API_KEY") or "AIzaSyBuDk5FjULXBisCiEUuqqztK6bojWHUcS8"
+    api_key = os.environ.get("GEMINI_API_KEY") or "AIzaSyCXJRTp9kPD79ai6d59SO5dtmBZX34gIus"
     genai.configure(api_key=api_key)
     
     # Check for working models - Prioritize Gemma if Gemini is hitting quota
-    working_model_name = 'gemini-1.5-flash'
+    working_model_name = None
     try:
         test_model = genai.GenerativeModel('gemini-1.5-flash')
         test_model.generate_content("test", generation_config={"max_output_tokens": 1})
@@ -30,10 +30,15 @@ try:
                 break
             except: continue
         
-    model = genai.GenerativeModel(working_model_name)
-    print(f"--- GHOST AI INITIALIZED WITH: {working_model_name} ---")
-    HAS_GENAI = True
-    INIT_ERROR = None
+    if working_model_name:
+        model = genai.GenerativeModel(working_model_name)
+        print(f"--- GHOST AI INITIALIZED WITH: {working_model_name} ---")
+        HAS_GENAI = True
+        INIT_ERROR = None
+    else:
+        print("--- GHOST AI: NO WORKING MODELS FOUND ---")
+        HAS_GENAI = False
+        INIT_ERROR = "All generative models failed. Your API key might be invalid or leaked."
 except Exception as e:
     print(f"--- GHOST AI INIT FAILED: {str(e)} ---")
     HAS_GENAI = False
@@ -72,6 +77,44 @@ def get_voice_agent_response(transcript, state_history="[]"):
             return {"response": "Halted.", "actions": [{"type": "stop_scroll"}]}
         return {"response": f"Gliding {d}.", "actions": [{"type": "scroll", "direction": d}]}
 
+    # 2. HEURISTIC NAVIGATION FALLBACK (Works even if AI is offline)
+    nav_map = {
+        "dashboard": "dashboard.html",
+        "home": "dashboard.html",
+        "overview": "dashboard.html",
+        "market": "markets.html",
+        "stock": "markets.html",
+        "trade": "markets.html",
+        "payment": "payments.html",
+        "wallet": "payments.html",
+        "pay": "payments.html",
+        "analyze": "smart-analyzer.html",
+        "statement": "smart-analyzer.html",
+        "arena": "arena.html",
+        "game": "arena.html",
+        "insurance": "insurance.html",
+        "protect": "insurance.html",
+        "tax": "tax.html",
+        "harvest": "tax.html",
+        "simulator": "simulator.html",
+        "future": "simulator.html",
+        "will": "will.html",
+        "legacy": "will.html",
+        "profile": "profile.html",
+        "account": "profile.html",
+        "goal": "goals.html",
+        "transaction": "transactions.html",
+        "history": "transactions.html"
+    }
+
+    for keyword, url in nav_map.items():
+        if keyword in t:
+            return {
+                "response": f"Navigating to {keyword.capitalize()} section.",
+                "actions": [{"type": "navigate", "url": url}]
+            }
+
+    # 3. AI PROCESSING (Gemini / Gemma)
     if HAS_GENAI:
         try:
             print(f"--- GHOST AI PROCESSING: '{transcript}' ---")
@@ -83,7 +126,7 @@ def get_voice_agent_response(transcript, state_history="[]"):
             2. 'actions': A list of objects with 'type' and parameters.
             
             Supported Actions:
-            - {"type": "navigate", "url": "dashboard.html" | "markets.html" | "payments.html" | "smart-analyzer.html" | "arena.html"}
+            - {"type": "navigate", "url": "dashboard.html" | "markets.html" | "payments.html" | "smart-analyzer.html" | "arena.html" | "insurance.html" | "tax.html" | "simulator.html" | "will.html"}
             - {"type": "agent_click", "id": "BUTTON_ID"}
             - {"type": "agent_type", "id": "INPUT_ID", "value": "TEXT"}
             
@@ -116,13 +159,20 @@ def get_voice_agent_response(transcript, state_history="[]"):
                 return data
             else:
                 print("--- GHOST AI: NO JSON FOUND IN TEXT ---")
+                return {"response": "I processed your request but could not generate a structured action. " + text[:100], "actions": []}
         except Exception as e:
-            print(f"--- GHOST AI ERROR: {str(e)} ---")
-            pass
+            err_msg = str(e)
+            print(f"--- GHOST AI ERROR: {err_msg} ---")
+            if "leaked" in err_msg.lower():
+                return {"response": "Security Alert: Your Gemini API Key has been flagged as leaked. Please update it in your .env file to restore AI services.", "actions": []}
+            return {"response": f"AI processing error: {err_msg[:100]}. Using fail-safe mode.", "actions": []}
 
     if INIT_ERROR:
-        return {"response": f"AI Engine is offline. Error: {INIT_ERROR[:50]}. Please check your API key in Render settings.", "actions": []}
-    return {"response": "I'm listening. How can I help you navigate Flux?", "actions": []}
+        if "leaked" in INIT_ERROR.lower():
+            return {"response": "Your Gemini API Key was reported as leaked and has been disabled by Google. Please provide a fresh API key in settings.", "actions": []}
+        return {"response": f"AI Engine is offline. Error: {INIT_ERROR[:50]}. Please check your API key.", "actions": []}
+    
+    return {"response": "Ghost AI is in fail-safe mode. I can help you navigate if you say things like 'Go to Dashboard' or 'Show Markets'.", "actions": []}
 
 def get_ml_response(message, user_data):
     if not HAS_GENAI:
